@@ -1,0 +1,23 @@
+{
+  "name": "autocontent-ai",
+  "version": "1.0.0",
+  "description": "Auto Content Scriptwriter Desktop App with Multi-Provider AI",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "keywords": [
+    "youtube",
+    "content-creator",
+    "ai-scriptwriter",
+    "electron",
+    "deepseek",
+    "openrouter"
+  ],
+  "author": "AutoContent AI",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.0"
+  }
+}

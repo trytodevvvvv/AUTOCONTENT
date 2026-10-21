@@ -1,0 +1,27 @@
+# Node dependencies
+node_modules/
+
+# Sensitive user credentials and local database
+# (Tuyệt đối không đẩy API Key và dữ liệu cá nhân lên GitHub)
+saved_apis.json
+user_settings.json
+defaultSettings.json
+
+# Production builds & packages
+dist/
+build/
+out/
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS and Editor metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
