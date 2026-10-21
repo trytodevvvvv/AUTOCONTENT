@@ -1287,7 +1287,7 @@ function saveModalInputsIntoEditingProvider() {
   provider.displayName = DOM.cfgDisplayName.value.trim() || (isGemini ? 'Google Gemini' : 'API Provider');
   
   if (isGemini) {
-    provider.baseUrl = GEMINI_BASE_URL;
+    provider.baseUrl = resolveBaseUrl({ ...provider, apiKey: provider.apiKey });
   } else {
     provider.baseUrl = DOM.cfgBaseUrl.value.trim();
   }
@@ -1432,8 +1432,10 @@ async function testProviderConnection() {
   const provider = state.settings.providers.find(p => p.id === state.currentEditingProviderId);
   if (!provider) return;
 
+  const isGemini = (provider.providerType === 'gemini') || (DOM.radioTypeGemini && DOM.radioTypeGemini.checked);
   const apiKey = (DOM.cfgApiKey.value || '').trim();
-  const baseUrl = resolveBaseUrl({ ...provider, apiKey });
+  const rawBaseUrl = (DOM.cfgBaseUrl.value || '').trim();
+  const baseUrl = resolveBaseUrl({ ...provider, apiKey, baseUrl: rawBaseUrl });
   provider.baseUrl = baseUrl;
 
   if (!apiKey) {
@@ -1444,8 +1446,22 @@ async function testProviderConnection() {
     return;
   }
 
+  if (!isGemini && !rawBaseUrl) {
+    DOM.cfgBaseUrl.classList.add('input-error');
+    updateTestConnectionCard('error', 'Chưa nhập Base URL', 'Cách 1 yêu cầu nhập Base URL máy chủ API (Ví dụ: https://api.vilao.ai/v1).');
+    showToast('Vui lòng nhập Base URL trước!', 'warning');
+    DOM.cfgBaseUrl.focus();
+    return;
+  }
+
   DOM.cfgApiKey.classList.remove('input-error');
-  updateTestConnectionCard('loading', 'Đang kiểm tra kết nối...', `Đang gửi yêu cầu xác thực tới máy chủ ${isGemini ? 'Google Gemini' : baseUrl}...`);
+  DOM.cfgBaseUrl.classList.remove('input-error');
+
+  const serverName = isGemini 
+    ? (apiKey.startsWith('AIzaSy') ? 'Google Gemini' : (apiKey.startsWith('gsk_') ? 'Groq' : (apiKey.startsWith('sk-or-') ? 'OpenRouter' : 'máy chủ API')))
+    : (rawBaseUrl || 'máy chủ API');
+
+  updateTestConnectionCard('loading', 'Đang kiểm tra kết nối...', `Đang gửi yêu cầu xác thực tới ${serverName}...`);
   DOM.btnTestConnection.disabled = true;
 
   try {
@@ -1515,6 +1531,7 @@ async function fetchModelsFromProvider() {
   }
 
   const isGemini = (provider.providerType === 'gemini') || (DOM.radioTypeGemini && DOM.radioTypeGemini.checked);
+  provider.baseUrl = resolveBaseUrl(provider);
   const displayUrl = isGemini ? 'Google Gemini' : provider.baseUrl;
 
   updateTestConnectionCard('loading', 'Đang tải danh sách models...', `Đang gọi /models từ ${displayUrl}...`);
@@ -1737,7 +1754,9 @@ async function saveAndApplySettings() {
 
   const isGemini = (provider.providerType === 'gemini') || (DOM.radioTypeGemini && DOM.radioTypeGemini.checked);
   const apiKey = (DOM.cfgApiKey.value || '').trim();
-  const baseUrl = isGemini ? GEMINI_BASE_URL : (DOM.cfgBaseUrl.value || '').trim();
+  const rawBaseUrl = (DOM.cfgBaseUrl.value || '').trim();
+  const baseUrl = resolveBaseUrl({ ...provider, apiKey, baseUrl: rawBaseUrl });
+  provider.baseUrl = baseUrl;
 
   // Validate API Key presence
   if (!apiKey) {
@@ -1749,7 +1768,7 @@ async function saveAndApplySettings() {
   }
 
   // Validate Base URL presence (only required for Cách 1 / non-Gemini)
-  if (!isGemini && !baseUrl) {
+  if (!isGemini && !rawBaseUrl) {
     DOM.cfgBaseUrl.focus();
     updateTestConnectionCard('error', 'Chưa nhập Base URL', 'Vui lòng nhập Base URL máy chủ API.');
     showToast('Vui lòng nhập Base URL trước khi lưu!', 'warning');
@@ -1760,7 +1779,12 @@ async function saveAndApplySettings() {
   DOM.btnApplySettings.disabled = true;
   const originalApplyText = DOM.btnApplySettings.textContent;
   DOM.btnApplySettings.textContent = 'Đang kiểm tra kết nối...';
-  updateTestConnectionCard('loading', 'Đang kiểm tra kết nối...', `Đang xác thực API Key với máy chủ ${isGemini ? 'Google Gemini' : baseUrl}...`);
+  
+  const serverName = isGemini 
+    ? (apiKey.startsWith('AIzaSy') ? 'Google Gemini' : (apiKey.startsWith('gsk_') ? 'Groq' : (apiKey.startsWith('sk-or-') ? 'OpenRouter' : 'máy chủ API')))
+    : (rawBaseUrl || 'máy chủ API');
+
+  updateTestConnectionCard('loading', 'Đang kiểm tra kết nối...', `Đang xác thực API Key với ${serverName}...`);
 
   let res;
   try {
