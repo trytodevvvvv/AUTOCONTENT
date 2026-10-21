@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 
 let mainWindow;
 
@@ -71,24 +72,30 @@ function createWindow() {
   });
 }
 
+// Safe IPC Registration Helper to prevent duplicate channel registration conflicts
+function registerIpcHandler(channel, handler) {
+  ipcMain.removeHandler(channel);
+  ipcMain.handle(channel, handler);
+}
+
 // IPC Handlers
-ipcMain.handle('get-saved-apis', () => {
+registerIpcHandler('get-saved-apis', () => {
   return loadSavedApis();
 });
 
-ipcMain.handle('save-saved-apis', (event, data) => {
+registerIpcHandler('save-saved-apis', (event, data) => {
   return saveSavedApis(data);
 });
 
-ipcMain.handle('get-settings', () => {
+registerIpcHandler('get-settings', () => {
   return loadSavedApis();
 });
 
-ipcMain.handle('save-settings', (event, settings) => {
+registerIpcHandler('save-settings', (event, settings) => {
   return saveSavedApis(settings);
 });
 
-ipcMain.handle('open-file-dialog', async () => {
+registerIpcHandler('open-file-dialog', async () => {
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Chọn file kịch bản hoặc văn bản gốc',
@@ -134,9 +141,29 @@ except Exception as e:
   }
 });
 
-ipcMain.handle('test-connection', async (event, provider) => {
+function resolveBaseUrl(provider) {
+  let baseUrl = (provider.baseUrl || '').trim().replace(/\/+$/, '');
+  const apiKey = (provider.apiKey || '').trim();
+  const isKeyOnly = (provider.providerType === 'gemini');
+
+  if (isKeyOnly || !baseUrl || baseUrl.includes('your-provider.com')) {
+    if (apiKey.startsWith('AIzaSy')) {
+      return 'https://generativelanguage.googleapis.com/v1beta/openai';
+    } else if (apiKey.startsWith('gsk_')) {
+      return 'https://api.groq.com/openai/v1';
+    } else if (apiKey.startsWith('sk-or-')) {
+      return 'https://openrouter.ai/api/v1';
+    } else if (isKeyOnly) {
+      return 'https://generativelanguage.googleapis.com/v1beta/openai';
+    }
+  }
+  return baseUrl;
+}
+
+registerIpcHandler('test-connection', async (event, provider) => {
   try {
-    const baseUrl = (provider.baseUrl || '').trim().replace(/\/+$/, '');
+    const isGemini = provider.providerType === 'gemini' || (provider.apiKey && provider.apiKey.trim().startsWith('AIzaSy'));
+    const baseUrl = resolveBaseUrl(provider);
     const apiKey = (provider.apiKey || '').trim();
 
     if (!baseUrl) {
@@ -200,7 +227,7 @@ ipcMain.handle('test-connection', async (event, provider) => {
       const chatController = new AbortController();
       const chatTimeout = setTimeout(() => chatController.abort(), 10000);
       try {
-        const testModel = (provider.models && provider.models[0]?.id) || 'default';
+        const testModel = (provider.models && provider.models[0]?.id) || (isGemini ? 'gemini-1.5-flash' : 'default');
         const chatRes = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
@@ -246,9 +273,9 @@ ipcMain.handle('test-connection', async (event, provider) => {
   }
 });
 
-ipcMain.handle('fetch-models', async (event, provider) => {
+registerIpcHandler('fetch-models', async (event, provider) => {
   try {
-    const baseUrl = (provider.baseUrl || '').replace(/\/+$/, '');
+    const baseUrl = resolveBaseUrl(provider);
     const apiKey = provider.apiKey || '';
 
     const controller = new AbortController();
@@ -295,7 +322,7 @@ ipcMain.handle('fetch-models', async (event, provider) => {
   }
 });
 
-ipcMain.handle('save-file-dialog', async (event, { content, defaultFilename, ext = 'txt' }) => {
+registerIpcHandler('save-file-dialog', async (event, { content, defaultFilename, ext = 'txt' }) => {
   try {
     const result = await dialog.showSaveDialog(mainWindow, {
       title: 'Lưu Kịch Bản Ra File',
@@ -316,26 +343,163 @@ ipcMain.handle('save-file-dialog', async (event, { content, defaultFilename, ext
   }
 });
 
-ipcMain.handle('open-external', async (event, url) => {
-  shell.openExternal(url);
-  return true;
+registerIpcHandler('open-external', async (event, url) => {
+  try {
+    if (url && (url.startsWith('https://') || url.startsWith('http://'))) {
+      shell.openExternal(url);
+      return { success: true };
+    }
+    return { success: false, error: 'Invalid URL' };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
-ipcMain.handle('window-minimize', () => mainWindow?.minimize());
-ipcMain.handle('window-maximize', () => {
+registerIpcHandler('window-minimize', () => mainWindow?.minimize());
+registerIpcHandler('window-maximize', () => {
   if (mainWindow?.isMaximized()) {
     mainWindow.unmaximize();
   } else {
     mainWindow?.maximize();
   }
 });
-ipcMain.handle('window-close', () => mainWindow?.close());
+registerIpcHandler('window-close', () => mainWindow?.close());
+
+// ===================================================================
+// GITHUB AUTO-UPDATE SYSTEM (NON-INTRUSIVE & USER-OPTIONAL)
+// ===================================================================
+const GITHUB_OWNER = 'trytodevvvvv';
+const GITHUB_REPO = 'AUTOCONTENT';
+
+function compareVersions(v1, v2) {
+  const clean1 = (v1 || '').replace(/^v/i, '').trim();
+  const clean2 = (v2 || '').replace(/^v/i, '').trim();
+  const parts1 = clean1.split('.').map(Number);
+  const parts2 = clean2.split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const num1 = parts1[i] || 0;
+    const num2 = parts2[i] || 0;
+    if (num1 > num2) return 1;
+    if (num1 < num2) return -1;
+  }
+  return 0;
+}
+
+function fetchLatestGithubRelease() {
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'AutoContent-Studio-App'
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            reject(new Error('Lỗi phân tích dữ liệu cập nhật từ GitHub.'));
+          }
+        } else if (res.statusCode === 404) {
+          resolve(null);
+        } else {
+          reject(new Error(`GitHub phản hồi mã: ${res.statusCode}`));
+        }
+      });
+    });
+
+    req.on('error', err => reject(err));
+    req.setTimeout(8000, () => {
+      req.destroy();
+      reject(new Error('Hết thời gian chờ kết nối GitHub (Timeout)'));
+    });
+    req.end();
+  });
+}
+
+async function checkAppUpdates(manual = false) {
+  const currentVersion = app.getVersion();
+  try {
+    const release = await fetchLatestGithubRelease();
+    if (!release || !release.tag_name) {
+      return {
+        hasUpdate: false,
+        currentVersion: `v${currentVersion}`,
+        latestVersion: `v${currentVersion}`,
+        message: 'Bạn đang sử dụng phiên bản mới nhất!'
+      };
+    }
+
+    const latestVersion = release.tag_name.replace(/^v/i, '');
+    const isNewer = compareVersions(latestVersion, currentVersion) > 0;
+
+    if (isNewer) {
+      let downloadUrl = release.html_url;
+      if (Array.isArray(release.assets) && release.assets.length > 0) {
+        const exeAsset = release.assets.find(a => a.name && a.name.toLowerCase().endsWith('.exe'));
+        if (exeAsset && exeAsset.browser_download_url) {
+          downloadUrl = exeAsset.browser_download_url;
+        }
+      }
+
+      const updateData = {
+        hasUpdate: true,
+        currentVersion: `v${currentVersion}`,
+        latestVersion: `v${latestVersion}`,
+        releaseName: release.name || `Bản phát hành v${latestVersion}`,
+        releaseNotes: release.body || 'Phiên bản mới với nhiều cải tiến hiệu năng và tính năng mới.',
+        publishedAt: release.published_at,
+        releaseUrl: release.html_url,
+        downloadUrl: downloadUrl
+      };
+
+      if (!manual && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update-available', updateData);
+      }
+
+      return updateData;
+    }
+
+    return {
+      hasUpdate: false,
+      currentVersion: `v${currentVersion}`,
+      latestVersion: `v${latestVersion}`,
+      message: 'Bạn đang sử dụng phiên bản mới nhất!'
+    };
+  } catch (err) {
+    return {
+      hasUpdate: false,
+      currentVersion: `v${currentVersion}`,
+      error: err.message
+    };
+  }
+}
+
+registerIpcHandler('check-for-updates', async (event, args) => {
+  return await checkAppUpdates(args?.manual || false);
+});
+
+registerIpcHandler('get-app-version', () => {
+  return app.getVersion();
+});
 
 app.whenReady().then(() => {
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.autocontent.studio');
   }
   createWindow();
+
+  // Gentle non-intrusive auto-check after 5 seconds of launch
+  setTimeout(() => {
+    checkAppUpdates(false);
+  }, 5000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

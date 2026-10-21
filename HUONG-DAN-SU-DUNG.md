@@ -72,3 +72,45 @@ Khi bạn bấm nút **`TẠO KỊCH BẢN TỰ ĐỘNG`**:
 * **Kịch bản dùng được ngay**: Không chèn các ký hiệu rườm rà, không mốc thời gian `00:00`, không thẻ cảnh `[Visual]`, tạo thành các đoạn văn tự nhiên để người đọc/thu âm đọc liền mạch.
 * **Tự động đo thời lượng**: Ước tính số từ và thời lượng đọc kịch bản tính theo phút/giây.
 * **Xuất bản 1 chạm**: Nút **`Sao chép toàn bộ`**, lưu thành file **`.TXT`** hoặc **`.MD`**.
+
+---
+
+## 📦 Hướng Dẫn Đóng Gói Ứng Dụng Thành File `.exe`
+
+Để xuất file `.exe` gửi cho người khác sử dụng mà không cần cài môi trường Node.js:
+
+* **Cách 1 (Nhanh nhất - 1 cú click)**: Nhấp đúp chuột vào file **`Dong-Goi-Ung-Dung.bat`**. Ứng dụng sẽ tự động đóng gói cả bản Portable và Setup rồi tự mở thư mục `dist/` chứa file `.exe` cho bạn!
+* **Cách 2 (Qua Terminal)**:
+  ```bash
+  npm run build:win
+  ```
+2. **Chỉ đóng gói bản Portable (Chạy ngay 1-click, không cần cài đặt)**:
+   ```bash
+   npm run build:portable
+   ```
+3. **Chỉ đóng gói bản Setup cài đặt (Tạo shortcut ngoài màn hình Desktop)**:
+   ```bash
+   npm run build:setup
+   ```
+
+*Sau khi lệnh chạy xong, các tệp `.exe` hoàn chỉnh sẽ nằm trong thư mục **`dist/`**.*
+
+---
+
+## 🔄 Cơ Chế Cập Nhật Thông Minh & Tôn Trọng Người Dùng
+
+1. **Kiểm tra tự động không làm phiền**:
+   * Khi người dùng mở ứng dụng khoảng 5 giây, hệ thống sẽ kết nối nhẹ nhàng với GitHub để kiểm tra phiên bản mới.
+   * Nếu có bản mới: Pop-up thông báo hiển thị tóm tắt tính năng mới kèm 2 nút:
+     * **`Cập nhật ngay`**: Mở liên kết tải bản nâng cấp.
+     * **`Để sau`**: Đóng thông báo, không làm gián đoạn công việc của người dùng.
+2. **Chủ động kiểm tra bất kỳ lúc nào**:
+   * Người dùng có thể nhấp vào nút **`Cài đặt`** ở góc trên bên phải.
+   * Tại mục **Phiên bản & Cập nhật**, nhấp nút **`Kiểm tra cập nhật`** để cập nhật khi rảnh tay.
+3. **Bảo toàn dữ liệu người dùng**:
+   * Khi cập nhật bản mới, toàn bộ API Key và cấu hình đã lưu của người dùng vẫn được bảo toàn nguyên vẹn 100%.
+4. **Nguyên tắc phân phối 1 lần (Không cần đóng gói lại nhiều lần)**:
+   * Bạn chỉ cần gửi file `.exe` cho người dùng đúng **1 lần duy nhất** lúc ban đầu.
+   * Về sau khi bạn cập nhật thêm chức năng mới, chỉ cần đẩy bản phát hành lên GitHub. Người dùng sẽ nhận được thông báo và nâng cấp trực tiếp qua đám mây GitHub mà bạn không cần phải xuất file `.exe` hay gửi lại file cho họ nữa!
+
+

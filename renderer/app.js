@@ -22,7 +22,8 @@ const state = {
     words: 0,
     chars: 0,
     estimatedSeconds: 0
-  }
+  },
+  pendingUpdate: null
 };
 
 // Sample text for instant demonstration
@@ -33,6 +34,33 @@ const SAMPLE_INPUT_TEXT = `Tại sao DeepSeek lại tạo nên cơn địa chấ
 Bí quyết nằm ở kiến trúc Mixture of Experts (MoE) cực kỳ tối ưu, thuật toán Multi-Head Latent Attention (MLA), và phương pháp học tăng cường không cần dữ liệu gắn nhãn tốn kém. Không chỉ vậy, DeepSeek còn mở mã nguồn mở hoàn toàn mô hình, cho phép cộng đồng phát triển tự do tải về và triển khai cục bộ.
 
 Điều này chứng minh rằng: Cuộc đua AI không chỉ là câu chuyện dùng tiền đè người với hàng trăm nghìn card GPU đắt đỏ, mà trí tuệ tối ưu hóa thuật toán mới là chìa khóa mở ra tương lai AI giá rẻ cho nhân loại.`;
+
+// Gemini API Constants
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
+const GEMINI_DEFAULT_MODELS = [
+  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Khuyên dùng)' },
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Tốc độ cao)' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Suy luận sâu)' }
+];
+
+function resolveBaseUrl(provider) {
+  let baseUrl = (provider.baseUrl || '').trim().replace(/\/+$/, '');
+  const apiKey = (provider.apiKey || '').trim();
+  const isKeyOnly = (provider.providerType === 'gemini');
+
+  if (isKeyOnly || !baseUrl || baseUrl.includes('your-provider.com')) {
+    if (apiKey.startsWith('AIzaSy')) {
+      return GEMINI_BASE_URL;
+    } else if (apiKey.startsWith('gsk_')) {
+      return 'https://api.groq.com/openai/v1';
+    } else if (apiKey.startsWith('sk-or-')) {
+      return 'https://openrouter.ai/api/v1';
+    } else if (isKeyOnly) {
+      return GEMINI_BASE_URL;
+    }
+  }
+  return baseUrl;
+}
 
 // DOM Elements
 const DOM = {
@@ -47,6 +75,7 @@ const DOM = {
   btnQuickManageApis: document.getElementById('btnQuickManageApis'),
   btnOpenSettings: document.getElementById('btnOpenSettings'),
   btnOpenGeneralSettings: document.getElementById('btnOpenGeneralSettings'),
+  headerUpdateBadgeDot: document.getElementById('headerUpdateBadgeDot'),
 
   // Left Panel (Input & Options)
   inputOriginal: document.getElementById('inputOriginal'),
@@ -81,7 +110,8 @@ const DOM = {
   outputStatusBadge: document.getElementById('outputStatusBadge'),
   outputStatusText: document.getElementById('outputStatusText'),
   outputStatusSubtitle: document.getElementById('outputStatusSubtitle'),
-  outWordCount: document.getElementById('outWordCount'),
+  outCharCount: document.getElementById('outCharCount') || document.getElementById('outWordCount'),
+  outWordCount: document.getElementById('outCharCount') || document.getElementById('outWordCount'),
   outEstimatedTime: document.getElementById('outEstimatedTime'),
   outLangLabel: document.getElementById('outLangLabel'),
   outputContainer: document.getElementById('outputContainer'),
@@ -102,6 +132,18 @@ const DOM = {
   btnAddNewProviderHeader: document.getElementById('btnAddNewProviderHeader'),
   btnDeleteProvider: document.getElementById('btnDeleteProvider'),
   providerTabs: document.getElementById('providerTabs'),
+
+  // Provider Connection Types (Cách 1 & Cách 2)
+  cardTypeOpenAI: document.getElementById('cardTypeOpenAI'),
+  cardTypeGemini: document.getElementById('cardTypeGemini'),
+  radioTypeOpenAI: document.getElementById('radioTypeOpenAI'),
+  radioTypeGemini: document.getElementById('radioTypeGemini'),
+  groupBaseUrl: document.getElementById('groupBaseUrl'),
+  geminiAutoNotice: document.getElementById('geminiAutoNotice'),
+  linkGetGeminiKey: document.getElementById('linkGetGeminiKey'),
+  lblApiKey: document.getElementById('lblApiKey'),
+  tooltipApiKey: document.getElementById('tooltipApiKey'),
+
   cfgApiKey: document.getElementById('cfgApiKey'),
   btnToggleApiKeyVisibility: document.getElementById('btnToggleApiKeyVisibility'),
   eyeIcon: document.getElementById('eyeIcon'),
@@ -144,6 +186,21 @@ const DOM = {
   cardSpacingTight: document.getElementById('cardSpacingTight'),
   cardSpacingNormal: document.getElementById('cardSpacingNormal'),
 
+  // Version & Update System Elements
+  currentAppVersionDisplay: document.getElementById('currentAppVersionDisplay'),
+  appVersionStatusText: document.getElementById('appVersionStatusText'),
+  btnCheckUpdateManual: document.getElementById('btnCheckUpdateManual'),
+  btnCheckUpdateText: document.getElementById('btnCheckUpdateText'),
+  iconRefreshUpdate: document.getElementById('iconRefreshUpdate'),
+  updateNotificationModal: document.getElementById('updateNotificationModal'),
+  updateNewVersionBadge: document.getElementById('updateNewVersionBadge'),
+  updateCurrentVersionNote: document.getElementById('updateCurrentVersionNote'),
+  updateDescText: document.getElementById('updateDescText'),
+  updateChangelogContent: document.getElementById('updateChangelogContent'),
+  btnCloseUpdateModal: document.getElementById('btnCloseUpdateModal'),
+  btnPostponeUpdate: document.getElementById('btnPostponeUpdate'),
+  btnAcceptUpdate: document.getElementById('btnAcceptUpdate'),
+
   // Toast
   toast: document.getElementById('toast'),
   toastIcon: document.getElementById('toastIcon'),
@@ -158,6 +215,7 @@ async function initApp() {
   await loadSettings();
   updateHeaderActiveModel();
   checkReadiness();
+  initUpdateSystem();
 }
 
 async function loadSettings() {
@@ -344,6 +402,36 @@ function bindEvents() {
   DOM.btnCancelSettings.addEventListener('click', closeSettingsModal);
   DOM.btnApplySettings.addEventListener('click', saveAndApplySettings);
 
+  // Connection Type Switchers (Cách 1 vs Cách 2)
+  if (DOM.cardTypeOpenAI) {
+    DOM.cardTypeOpenAI.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (DOM.cardTypeOpenAI.classList.contains('disabled')) return;
+      const provider = state.settings.providers.find(p => p.id === state.currentEditingProviderId);
+      if (provider) provider.providerType = 'openai';
+      setProviderType('openai', true);
+    });
+  }
+  if (DOM.cardTypeGemini) {
+    DOM.cardTypeGemini.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (DOM.cardTypeGemini.classList.contains('disabled')) return;
+      const provider = state.settings.providers.find(p => p.id === state.currentEditingProviderId);
+      if (provider) provider.providerType = 'gemini';
+      setProviderType('gemini', true);
+    });
+  }
+  if (DOM.linkGetGeminiKey) {
+    DOM.linkGetGeminiKey.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.api && window.api.openExternal) {
+        window.api.openExternal('https://aistudio.google.com/apikey');
+      } else {
+        window.open('https://aistudio.google.com/apikey', '_blank');
+      }
+    });
+  }
+
   DOM.btnToggleApiKeyVisibility.addEventListener('click', toggleApiKeyVisibility);
   DOM.btnToggleCustomized.addEventListener('click', () => {
     const isCollapsed = DOM.customizedContent.classList.toggle('collapsed');
@@ -388,9 +476,17 @@ function bindEvents() {
     if (provider) provider.displayName = newName;
   });
 
-  // API Key input live listener (Clear error and mark unverified on key edit)
+  // API Key input live listener (Auto-detects Gemini key, clears error, marks unverified on key edit)
   DOM.cfgApiKey.addEventListener('input', () => {
     DOM.cfgApiKey.classList.remove('input-error');
+    const keyVal = DOM.cfgApiKey.value.trim();
+
+    // Smart auto-detection: If key starts with AIzaSy (Google Gemini), auto-switch to Cách 2!
+    if (keyVal.startsWith('AIzaSy') && DOM.radioTypeOpenAI && DOM.radioTypeOpenAI.checked) {
+      setProviderType('gemini', true);
+      showToast('✨ Đã tự động nhận diện khóa Google Gemini!', 'info');
+    }
+
     if (state.connectionVerified) {
       state.connectionVerified[state.currentEditingProviderId] = false;
     }
@@ -423,6 +519,20 @@ function bindEvents() {
       DOM.cardSpacingNormal.classList.add('active');
       if (DOM.cardSpacingTight) DOM.cardSpacingTight.classList.remove('active');
     });
+  }
+
+  // Update System Controls
+  if (DOM.btnCheckUpdateManual) {
+    DOM.btnCheckUpdateManual.addEventListener('click', triggerManualUpdateCheck);
+  }
+  if (DOM.btnPostponeUpdate) {
+    DOM.btnPostponeUpdate.addEventListener('click', postponeUpdate);
+  }
+  if (DOM.btnCloseUpdateModal) {
+    DOM.btnCloseUpdateModal.addEventListener('click', postponeUpdate);
+  }
+  if (DOM.btnAcceptUpdate) {
+    DOM.btnAcceptUpdate.addEventListener('click', acceptUpdate);
   }
 
   // Note: Backdrop click dismissal removed to prevent accidental closure when scrolling or dragging
@@ -574,11 +684,12 @@ async function startGeneration() {
   DOM.streamCursor.classList.remove('hidden');
 
   DOM.outLangLabel.textContent = translate ? targetLanguage.split(' ')[0] : 'Gốc';
+  updateOutputStats();
 
   state.abortController = new AbortController();
 
   try {
-    const baseUrl = (provider.baseUrl || '').replace(/\/+$/, '');
+    const baseUrl = resolveBaseUrl(provider);
     const endpoint = `${baseUrl}/chat/completions`;
 
     const payload = {
@@ -650,6 +761,9 @@ async function startGeneration() {
       }
     }
 
+    // Flush any pending frame to guarantee 100% of generated content is rendered
+    flushStreamRender();
+
     // Finished
     DOM.outputStatusBadge.className = 'output-status-pill completed';
     DOM.outputStatusText.textContent = 'Hoàn thành';
@@ -676,6 +790,7 @@ async function startGeneration() {
       showToast(`Lỗi: ${err.message}`, 'danger');
     }
   } finally {
+    flushStreamRender();
     setGeneratingUIState(false);
   }
 }
@@ -768,31 +883,53 @@ ${formatDescriptions[format] || formatDescriptions.youtube_standard}`;
   return { systemPrompt, userPrompt };
 }
 
-// Append streaming text to output and update metrics
+// ===================================================================
+// HIGH-PERFORMANCE STREAM BUFFERING & RAF THROTTLING (60/120 FPS)
+// ===================================================================
+let streamRafId = null;
+
+function scheduleStreamRender() {
+  if (streamRafId) return;
+  streamRafId = requestAnimationFrame(() => {
+    streamRafId = null;
+    DOM.scriptContent.innerHTML = formatCleanScript(state.rawOutputScript);
+    DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
+    updateOutputStats();
+  });
+}
+
+function flushStreamRender() {
+  if (streamRafId) {
+    cancelAnimationFrame(streamRafId);
+    streamRafId = null;
+  }
+  DOM.scriptContent.innerHTML = formatCleanScript(state.rawOutputScript);
+  DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
+  updateOutputStats();
+}
+
+// Append streaming text to output and schedule silky-smooth render
 function appendOutputChunk(chunk) {
   state.rawOutputScript += chunk;
-  
-  // Format pure paragraphs cleanly without brackets
-  DOM.scriptContent.innerHTML = formatCleanScript(state.rawOutputScript);
-
-  // Auto-scroll to bottom of output
-  DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
-
-  // Update output statistics
-  updateOutputStats();
+  scheduleStreamRender();
 }
 
 function updateOutputStats() {
   const text = state.rawOutputScript || '';
+  const chars = text.length;
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  state.stats.chars = chars;
   state.stats.words = words;
 
-  // Average reading speed: ~160 words per minute
+  // Average reading speed: ~160 words per minute (YouTube standard voiceover)
   const totalSeconds = Math.round((words / 160) * 60);
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
 
-  DOM.outWordCount.textContent = words.toLocaleString();
+  const targetCountEl = DOM.outCharCount || DOM.outWordCount;
+  if (targetCountEl) {
+    targetCountEl.textContent = chars.toLocaleString();
+  }
 
   if (totalSeconds < 60) {
     DOM.outEstimatedTime.textContent = `~${totalSeconds} giây`;
@@ -807,6 +944,7 @@ function stopGeneration() {
     state.abortController.abort();
     state.abortController = null;
   }
+  flushStreamRender();
 }
 
 // UI State toggle during generation - STRICT LOCKDOWN OF CORE FEATURES
@@ -1009,12 +1147,15 @@ function renderProviderTabs() {
 
   state.settings.providers.forEach(p => {
     const isOnline = !!(p.apiKey && (p.isVerified || state.connectionVerified?.[p.id]));
+    const isGemini = (p.providerType === 'gemini') || (p.apiKey && p.apiKey.startsWith('AIzaSy'));
+    const typeLabel = isGemini ? 'Cách 2' : 'Cách 1';
     const btn = document.createElement('button');
     btn.className = `provider-tab-pill ${p.id === state.currentEditingProviderId ? 'active' : ''}`;
     btn.type = 'button';
     btn.innerHTML = `
       <span class="tab-status-dot ${isOnline ? 'online' : 'offline'}" title="${isOnline ? 'Đang hoạt động' : 'Chưa kết nối / Lỗi'}"></span>
       <span class="tab-name">${escapeHtml(p.displayName || '(Chưa đặt tên)')}</span>
+      <span class="tab-type-tag ${isGemini ? 'gemini' : 'openai'}">${typeLabel}</span>
     `;
     btn.addEventListener('click', () => {
       saveModalInputsIntoEditingProvider();
@@ -1026,14 +1167,77 @@ function renderProviderTabs() {
   });
 }
 
+function setProviderType(type, autoFillDefaults = false) {
+  const isGemini = (type === 'gemini');
+  if (DOM.radioTypeGemini) DOM.radioTypeGemini.checked = isGemini;
+  if (DOM.radioTypeOpenAI) DOM.radioTypeOpenAI.checked = !isGemini;
+
+  if (DOM.cardTypeGemini) DOM.cardTypeGemini.classList.toggle('active', isGemini);
+  if (DOM.cardTypeOpenAI) DOM.cardTypeOpenAI.classList.toggle('active', !isGemini);
+
+  if (DOM.groupBaseUrl) DOM.groupBaseUrl.classList.toggle('hidden', isGemini);
+  if (DOM.geminiAutoNotice) DOM.geminiAutoNotice.classList.toggle('hidden', !isGemini);
+  if (DOM.linkGetGeminiKey) DOM.linkGetGeminiKey.classList.toggle('hidden', !isGemini);
+
+  if (isGemini) {
+    DOM.cfgApiKey.placeholder = 'Dán API Key (Google Gemini, OpenAI, Groq, OpenRouter...)';
+    if (DOM.tooltipApiKey) DOM.tooltipApiKey.title = 'Khóa API độc lập, không yêu cầu Base URL';
+    if (autoFillDefaults) {
+      if (!DOM.cfgDisplayName.value || DOM.cfgDisplayName.value.startsWith('API Provider') || DOM.cfgDisplayName.value.startsWith('Vilao')) {
+        DOM.cfgDisplayName.value = 'Google Gemini';
+        DOM.modalProviderTitle.textContent = 'Google Gemini';
+      }
+      DOM.cfgBaseUrl.value = '';
+      // Fill Gemini default models if switching to Cách 2
+      renderModelsCatalog(GEMINI_DEFAULT_MODELS);
+    }
+  } else {
+    DOM.cfgApiKey.placeholder = 'sk-... hoặc API Key của nhà cung cấp';
+    if (DOM.tooltipApiKey) DOM.tooltipApiKey.title = 'Khóa API từ nhà cung cấp (Vilao, DeepSeek, OpenRouter...)';
+    if (autoFillDefaults) {
+      if (!DOM.cfgDisplayName.value || DOM.cfgDisplayName.value === 'Google Gemini') {
+        DOM.cfgDisplayName.value = '';
+        DOM.modalProviderTitle.textContent = 'Cấu hình API';
+      }
+      // If switching back to Cách 1 and current models are Gemini, clear them to prevent mixing!
+      const currentModels = collectModelsFromUI();
+      if (currentModels.some(m => m.id && m.id.includes('gemini'))) {
+        renderModelsCatalog([]);
+      }
+    }
+  }
+}
+
 function loadEditingProviderIntoModal() {
   const provider = state.settings.providers.find(p => p.id === state.currentEditingProviderId);
   if (!provider) return;
 
-  DOM.modalProviderTitle.textContent = provider.displayName || 'Cấu hình API';
+  const isGemini = (provider.providerType === 'gemini')
+    || (provider.apiKey && provider.apiKey.trim().startsWith('AIzaSy'))
+    || (provider.baseUrl && provider.baseUrl.includes('googleapis.com'));
+
+  setProviderType(isGemini ? 'gemini' : 'openai', false);
+
+  // DISABLE the other method if this is already an existing/saved provider!
+  const isExistingProvider = !provider.isNew;
+  if (isExistingProvider) {
+    if (isGemini) {
+      if (DOM.cardTypeGemini) DOM.cardTypeGemini.classList.remove('disabled');
+      if (DOM.cardTypeOpenAI) DOM.cardTypeOpenAI.classList.add('disabled');
+    } else {
+      if (DOM.cardTypeOpenAI) DOM.cardTypeOpenAI.classList.remove('disabled');
+      if (DOM.cardTypeGemini) DOM.cardTypeGemini.classList.add('disabled');
+    }
+  } else {
+    // Brand new provider: Both cards enabled so user can freely choose!
+    if (DOM.cardTypeOpenAI) DOM.cardTypeOpenAI.classList.remove('disabled');
+    if (DOM.cardTypeGemini) DOM.cardTypeGemini.classList.remove('disabled');
+  }
+
+  DOM.modalProviderTitle.textContent = provider.displayName || (isGemini ? 'Google Gemini' : 'Cấu hình API');
   DOM.cfgApiKey.value = provider.apiKey || '';
   DOM.cfgDisplayName.value = provider.displayName || '';
-  DOM.cfgBaseUrl.value = provider.baseUrl || '';
+  DOM.cfgBaseUrl.value = (isGemini && (!provider.baseUrl || provider.baseUrl === GEMINI_BASE_URL)) ? '' : (provider.baseUrl || '');
   DOM.cfgProtocol.value = provider.apiProtocol || 'OpenAI Chat Completions';
 
   DOM.cfgApiKey.classList.remove('input-error');
@@ -1050,19 +1254,36 @@ function loadEditingProviderIntoModal() {
     updateTestConnectionCard('default', 'Trạng thái kết nối API', 'Bấm nút "Kiểm tra kết nối" hoặc bấm "Apply" để tự động kiểm tra trước khi lưu.');
   }
 
-  // Render Models list
-  renderModelsCatalog(provider.models || []);
+  // Render Models list (strictly isolated: if Gemini, load Gemini models; if OpenAI, keep OpenAI models)
+  let modelsToRender = provider.models || [];
+  if (isGemini && modelsToRender.length === 0) {
+    modelsToRender = [...GEMINI_DEFAULT_MODELS];
+    provider.models = modelsToRender;
+  }
+  renderModelsCatalog(modelsToRender);
 }
 
 function saveModalInputsIntoEditingProvider() {
   const provider = state.settings.providers.find(p => p.id === state.currentEditingProviderId);
   if (!provider) return;
 
+  const isGemini = DOM.radioTypeGemini && DOM.radioTypeGemini.checked;
+  provider.providerType = isGemini ? 'gemini' : 'openai';
   provider.apiKey = DOM.cfgApiKey.value.trim();
-  provider.displayName = DOM.cfgDisplayName.value.trim() || 'API Provider';
-  provider.baseUrl = DOM.cfgBaseUrl.value.trim();
+  provider.displayName = DOM.cfgDisplayName.value.trim() || (isGemini ? 'Google Gemini' : 'API Provider');
+  
+  if (isGemini) {
+    provider.baseUrl = GEMINI_BASE_URL;
+  } else {
+    provider.baseUrl = DOM.cfgBaseUrl.value.trim();
+  }
+
   provider.apiProtocol = DOM.cfgProtocol.value;
-  provider.models = collectModelsFromUI();
+  let models = collectModelsFromUI();
+  if (isGemini && models.length === 0) {
+    models = [...GEMINI_DEFAULT_MODELS];
+  }
+  provider.models = models;
 }
 
 function renderModelsCatalog(models) {
@@ -1154,7 +1375,7 @@ function toggleApiKeyVisibility() {
 // Reusable Real Server Verification Helper
 async function performTestConnection(providerData) {
   const apiKey = (providerData.apiKey || '').trim();
-  const baseUrl = (providerData.baseUrl || '').trim();
+  const baseUrl = resolveBaseUrl(providerData);
 
   if (!apiKey) {
     return { success: false, error: 'Chưa nhập API Key. Vui lòng dán API Key trước khi kiểm tra.' };
@@ -1165,7 +1386,7 @@ async function performTestConnection(providerData) {
 
   try {
     if (window.api && window.api.testConnection) {
-      return await window.api.testConnection(providerData);
+      return await window.api.testConnection({ ...providerData, apiKey, baseUrl });
     } else {
       const cleanUrl = baseUrl.replace(/\/+$/, '');
       const testRes = await fetch(`${cleanUrl}/models`, {
@@ -1198,7 +1419,8 @@ async function testProviderConnection() {
   if (!provider) return;
 
   const apiKey = (DOM.cfgApiKey.value || '').trim();
-  const baseUrl = (DOM.cfgBaseUrl.value || '').trim();
+  const baseUrl = resolveBaseUrl({ ...provider, apiKey });
+  provider.baseUrl = baseUrl;
 
   if (!apiKey) {
     DOM.cfgApiKey.classList.add('input-error');
@@ -1209,7 +1431,7 @@ async function testProviderConnection() {
   }
 
   DOM.cfgApiKey.classList.remove('input-error');
-  updateTestConnectionCard('loading', 'Đang kiểm tra kết nối...', `Đang gửi yêu cầu xác thực tới máy chủ ${baseUrl}...`);
+  updateTestConnectionCard('loading', 'Đang kiểm tra kết nối...', `Đang gửi yêu cầu xác thực tới máy chủ ${isGemini ? 'Google Gemini' : baseUrl}...`);
   DOM.btnTestConnection.disabled = true;
 
   try {
@@ -1278,7 +1500,10 @@ async function fetchModelsFromProvider() {
     return;
   }
 
-  updateTestConnectionCard('loading', 'Đang tải danh sách models...', `Đang gọi /models từ ${provider.baseUrl}...`);
+  const isGemini = (provider.providerType === 'gemini') || (DOM.radioTypeGemini && DOM.radioTypeGemini.checked);
+  const displayUrl = isGemini ? 'Google Gemini' : provider.baseUrl;
+
+  updateTestConnectionCard('loading', 'Đang tải danh sách models...', `Đang gọi /models từ ${displayUrl}...`);
   DOM.btnFetchModels.disabled = true;
 
   try {
@@ -1308,7 +1533,8 @@ function restoreCurrentProviderDefaults() {
   const provider = state.settings.providers.find(p => p.id === state.currentEditingProviderId);
   if (!provider) return;
 
-  provider.models = [];
+  const isGemini = (provider.providerType === 'gemini') || (DOM.radioTypeGemini && DOM.radioTypeGemini.checked);
+  provider.models = isGemini ? [...GEMINI_DEFAULT_MODELS] : [];
   loadEditingProviderIntoModal();
   updateTestConnectionCard('default', 'Trạng thái kết nối API', 'Bấm nút bên phải để kiểm tra API Key và máy chủ trước khi lưu.');
   showToast('Đã làm mới danh sách Models!', 'info');
@@ -1463,14 +1689,17 @@ async function confirmDeleteProvider() {
 }
 
 // Add New Provider (Clean blank provider ready for user input)
-async function addNewProvider() {
+async function addNewProvider(type = 'openai') {
+  const isGemini = (type === 'gemini');
   const newProv = {
     id: 'provider_' + Date.now(),
+    isNew: true, // Brand new unsaved provider
+    providerType: isGemini ? 'gemini' : 'openai',
     displayName: '',
     apiKey: '',
-    baseUrl: '',
+    baseUrl: isGemini ? GEMINI_BASE_URL : '',
     apiProtocol: 'OpenAI Chat Completions',
-    models: []
+    models: isGemini ? [...GEMINI_DEFAULT_MODELS] : []
   };
 
   state.settings.providers.push(newProv);
@@ -1481,8 +1710,8 @@ async function addNewProvider() {
   updateTestConnectionCard('default', 'Trạng thái kết nối API', 'Bấm nút bên phải để kiểm tra API Key và máy chủ trước khi lưu.');
   DOM.settingsModal.classList.remove('hidden');
 
-  DOM.cfgDisplayName.focus();
-  showToast('Đã tạo API mới. Hãy nhập Tên, Base URL và dán API Key của bạn!', 'info');
+  DOM.cfgApiKey.focus();
+  showToast('Đã tạo API mới. Bạn có thể chọn Cách 1 hoặc Cách 2 rồi dán API Key!', 'info');
 }
 
 // Save & Apply Settings (Auto-validates connection with real server before saving)
@@ -1492,8 +1721,9 @@ async function saveAndApplySettings() {
   const provider = state.settings.providers.find(p => p.id === state.currentEditingProviderId);
   if (!provider) return;
 
+  const isGemini = (provider.providerType === 'gemini') || (DOM.radioTypeGemini && DOM.radioTypeGemini.checked);
   const apiKey = (DOM.cfgApiKey.value || '').trim();
-  const baseUrl = (DOM.cfgBaseUrl.value || '').trim();
+  const baseUrl = isGemini ? GEMINI_BASE_URL : (DOM.cfgBaseUrl.value || '').trim();
 
   // Validate API Key presence
   if (!apiKey) {
@@ -1504,8 +1734,8 @@ async function saveAndApplySettings() {
     return;
   }
 
-  // Validate Base URL presence
-  if (!baseUrl) {
+  // Validate Base URL presence (only required for Cách 1 / non-Gemini)
+  if (!isGemini && !baseUrl) {
     DOM.cfgBaseUrl.focus();
     updateTestConnectionCard('error', 'Chưa nhập Base URL', 'Vui lòng nhập Base URL máy chủ API.');
     showToast('Vui lòng nhập Base URL trước khi lưu!', 'warning');
@@ -1516,7 +1746,7 @@ async function saveAndApplySettings() {
   DOM.btnApplySettings.disabled = true;
   const originalApplyText = DOM.btnApplySettings.textContent;
   DOM.btnApplySettings.textContent = 'Đang kiểm tra kết nối...';
-  updateTestConnectionCard('loading', 'Đang kiểm tra kết nối...', `Đang xác thực API Key với máy chủ ${baseUrl}...`);
+  updateTestConnectionCard('loading', 'Đang kiểm tra kết nối...', `Đang xác thực API Key với máy chủ ${isGemini ? 'Google Gemini' : baseUrl}...`);
 
   let res;
   try {
@@ -1546,7 +1776,8 @@ async function saveAndApplySettings() {
     return;
   }
 
-  // Verification SUCCEEDED
+  // Verification SUCCEEDED -> Lock in provider type permanently
+  delete provider.isNew;
   state.connectionVerified = state.connectionVerified || {};
   state.connectionVerified[provider.id] = true;
   provider.isVerified = true;
@@ -1630,6 +1861,147 @@ function saveGeneralSettings() {
 
   closeGeneralSettingsModal();
   showToast(`Đã lưu cài đặt! Kịch bản đang ở chế độ: ${isTight ? 'Sát dòng (Không khoảng trống)' : 'Dãn đoạn tiêu chuẩn'}`, 'success');
+}
+
+// ===================================================================
+// SYSTEM UPDATE MANAGEMENT (NON-INTRUSIVE & USER-OPTIONAL)
+// ===================================================================
+async function initUpdateSystem() {
+  try {
+    if (window.api && window.api.getAppVersion) {
+      const ver = await window.api.getAppVersion();
+      if (ver && DOM.currentAppVersionDisplay) {
+        DOM.currentAppVersionDisplay.textContent = `v${ver}`;
+      }
+    }
+
+    if (window.api && window.api.onUpdateAvailable) {
+      window.api.onUpdateAvailable((updateData) => {
+        handleUpdateDetected(updateData, false);
+      });
+    }
+  } catch (err) {
+    console.warn('Could not initialize update system:', err);
+  }
+}
+
+function handleUpdateDetected(updateData, isManual = false) {
+  if (!updateData || !updateData.hasUpdate) return;
+  state.pendingUpdate = updateData;
+
+  if (DOM.currentAppVersionDisplay) {
+    DOM.currentAppVersionDisplay.textContent = updateData.currentVersion || 'v1.1.0';
+  }
+  if (DOM.appVersionStatusText) {
+    DOM.appVersionStatusText.textContent = `Đã có bản cập nhật mới ${updateData.latestVersion}!`;
+    DOM.appVersionStatusText.className = 'version-status-text has-update';
+  }
+
+  const dismissedKey = 'dismissed_update_' + updateData.latestVersion;
+  const isDismissed = sessionStorage.getItem(dismissedKey) === 'true';
+
+  // Always show subtle badge dot on header settings button
+  if (DOM.headerUpdateBadgeDot) {
+    DOM.headerUpdateBadgeDot.classList.remove('hidden');
+  }
+
+  // If auto-detected on startup and previously postponed in this session, do NOT pop up
+  if (!isManual && isDismissed) {
+    return;
+  }
+
+  // Show polite update notification modal
+  if (DOM.updateNewVersionBadge) {
+    DOM.updateNewVersionBadge.textContent = updateData.latestVersion;
+  }
+  if (DOM.updateCurrentVersionNote) {
+    DOM.updateCurrentVersionNote.textContent = `Phiên bản bạn đang dùng: ${updateData.currentVersion}`;
+  }
+  if (DOM.updateChangelogContent) {
+    DOM.updateChangelogContent.textContent = updateData.releaseNotes || 'Phiên bản cải tiến hiệu năng và độ ổn định hệ thống.';
+  }
+
+  if (DOM.updateNotificationModal) {
+    DOM.updateNotificationModal.classList.remove('hidden');
+  }
+}
+
+async function triggerManualUpdateCheck() {
+  if (!window.api || !window.api.checkForUpdates) {
+    showToast('Chức năng chỉ hoạt động trên ứng dụng Desktop.', 'info');
+    return;
+  }
+
+  DOM.btnCheckUpdateManual.disabled = true;
+  if (DOM.iconRefreshUpdate) DOM.iconRefreshUpdate.classList.add('rotating');
+  if (DOM.btnCheckUpdateText) DOM.btnCheckUpdateText.textContent = 'Đang kiểm tra...';
+  if (DOM.appVersionStatusText) {
+    DOM.appVersionStatusText.textContent = 'Đang kết nối GitHub kiểm tra phiên bản mới...';
+    DOM.appVersionStatusText.className = 'version-status-text';
+  }
+
+  try {
+    const res = await window.api.checkForUpdates(true);
+
+    if (res && res.hasUpdate) {
+      handleUpdateDetected(res, true);
+      showToast(`✓ Tìm thấy bản cập nhật mới ${res.latestVersion}!`, 'success');
+    } else {
+      if (DOM.appVersionStatusText) {
+        DOM.appVersionStatusText.textContent = res?.message || 'Bạn đang sử dụng phiên bản mới nhất!';
+        DOM.appVersionStatusText.className = 'version-status-text latest';
+      }
+      showToast(res?.message || 'Bạn đang sử dụng phiên bản mới nhất!', 'info');
+    }
+  } catch (err) {
+    if (DOM.appVersionStatusText) {
+      DOM.appVersionStatusText.textContent = `Lỗi kiểm tra cập nhật: ${err.message}`;
+      DOM.appVersionStatusText.className = 'version-status-text';
+    }
+    showToast(`Không thể kiểm tra cập nhật: ${err.message}`, 'warning');
+  } finally {
+    DOM.btnCheckUpdateManual.disabled = false;
+    if (DOM.iconRefreshUpdate) DOM.iconRefreshUpdate.classList.remove('rotating');
+    if (DOM.btnCheckUpdateText) DOM.btnCheckUpdateText.textContent = 'Kiểm tra cập nhật';
+  }
+}
+
+function postponeUpdate() {
+  if (state.pendingUpdate && state.pendingUpdate.latestVersion) {
+    sessionStorage.setItem('dismissed_update_' + state.pendingUpdate.latestVersion, 'true');
+  }
+
+  if (DOM.updateNotificationModal) {
+    DOM.updateNotificationModal.classList.add('hidden');
+  }
+
+  // Keep badge dot visible so user knows they can check later
+  if (DOM.headerUpdateBadgeDot) {
+    DOM.headerUpdateBadgeDot.classList.remove('hidden');
+  }
+
+  showToast('Đã tạm hoãn cập nhật. Bạn có thể kiểm tra lại bất kỳ lúc nào trong phần Cài đặt!', 'info');
+}
+
+async function acceptUpdate() {
+  if (!state.pendingUpdate) return;
+
+  const targetUrl = state.pendingUpdate.downloadUrl || state.pendingUpdate.releaseUrl;
+  if (targetUrl && window.api && window.api.openExternal) {
+    try {
+      await window.api.openExternal(targetUrl);
+      showToast('Đang mở trang tải bản cập nhật mới...', 'success');
+    } catch (e) {
+      window.open(targetUrl, '_blank');
+    }
+  }
+
+  if (DOM.updateNotificationModal) {
+    DOM.updateNotificationModal.classList.add('hidden');
+  }
+  if (DOM.headerUpdateBadgeDot) {
+    DOM.headerUpdateBadgeDot.classList.add('hidden');
+  }
 }
 
 // ===================================================================

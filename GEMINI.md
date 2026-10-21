@@ -91,3 +91,15 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
    * Trong quá trình lập trình thử nghiệm, sửa lỗi nhỏ, chỉnh giao diện: **Bắt buộc giữ nguyên số phiên bản (`version`)** trong `package.json`. Ứng dụng ở các máy người dùng khác sẽ **hoàn toàn không bị làm phiền** hay hiện thông báo cập nhật.
    * **Chỉ nâng version khi phát hành bản lớn**: Chỉ khi nào một cụm tính năng hoàn chỉnh đã được người dùng nghiệm thu và có lệnh phát hành chính thức, lúc đó mới được nâng version trong `package.json` (ví dụ: `1.0.0` -> `1.1.0`) để kích hoạt cơ chế thông báo cập nhật sang máy người dùng.
 
+---
+
+## ⚡ LUẬT 7: PHÂN PHỐI 1 LẦN & CẬP NHẬT TỰ ĐỘNG QUA GITHUB (ONE-TIME PACKAGING & CLOUD UPDATE)
+
+1. **Đóng gói file `.exe` chỉ cần thực hiện 1 lần duy nhất**:
+   * Việc build file cài đặt `.exe` chỉ phục vụ việc bàn giao ứng dụng cho người dùng ở lần đầu tiên xuất xưởng.
+2. **Không cần đóng gói lại khi có bản cập nhật (Zero Re-packaging Delivery)**:
+   * Khi cập nhật thêm tính năng mới hoặc sửa lỗi, **tuyệt đối không cần phải đóng gói lại file `.exe` thủ công** để gửi lại qua Zalo/Drive cho người dùng.
+   * Chỉ cần nâng `version` trong `package.json` và đẩy lên GitHub (tạo GitHub Release), ứng dụng trên máy người dùng sẽ **tự động phát hiện và cập nhật trực tiếp qua GitHub**.
+   * Giúp tác giả tiết kiệm thời gian, không tốn công nén build nhiều lần, và người dùng luôn tự động được cập nhật phiên bản mới nhất mà vẫn giữ nguyên API Key của họ.
+
+
