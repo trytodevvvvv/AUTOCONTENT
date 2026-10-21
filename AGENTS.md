@@ -98,6 +98,8 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
        * *Cách thực hiện*: Truy cập `https://github.com/trytodevvvvv/AUTOCONTENT/releases/new`, chọn tag `vX.Y.Z`, đặt tiêu đề `AutoContent Studio vX.Y.Z`, điền ghi chú tóm tắt và bấm **Publish release** (hoặc gọi API tạo release qua token máy dev).
    * **Bước 4 (Phân phối tự động OTA)**:
      * Toàn bộ máy người dùng khi mở ứng dụng hoặc bấm "Kiểm tra cập nhật" sẽ nhận được thông báo bản mới ngay lập tức.
+3. **Mệnh lệnh kích hoạt phát hành (Release Trigger Command)**:
+   * Bất cứ khi nào người dùng yêu cầu: *"Đẩy code lên GitHub"*, *"Update code lên GitHub"*, *"Đẩy GitHub"* hay *"Xác nhận phát hành"*, AI **bắt buộc mặc định tự ngầm hiểu là thực thi toàn bộ Quy trình 4 bước của LUẬT 5** (tự động nâng version trong `package.json`, stage an toàn, commit, push main, tạo tag và publish GitHub Release).
 
 ---
 
@@ -105,7 +107,8 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
 
 1. **Nghiêm cấm AI tự ý commit hoặc git push**:
    * Sau khi chỉnh sửa code hoặc thêm tính năng, AI **chỉ được phép lưu file cục bộ** trên máy của lập trình viên để người dùng tự do kiểm tra và thử nghiệm.
-   * **Tuyệt đối cấm** việc tự ý chạy `git commit` hay `git push` nếu người dùng chưa ra lệnh bằng câu từ rõ ràng, chủ động (Ví dụ: *"Hãy đẩy code lên GitHub cho tôi"* hoặc *"Xác nhận phát hành bản mới"*).
+   * **Tuyệt đối cấm** việc tự ý chạy `git commit` hay `git push` nếu người dùng chưa ra lệnh bằng câu từ rõ ràng, chủ động.
+   * **Khi người dùng ra lệnh đẩy code**: Lập tức kích hoạt và áp dụng đầy đủ quy trình nâng cấp phiên bản theo **Luật 5**.
 2. **Cơ chế chặn thông báo cập nhật rác sang máy người dùng (Update Spam Protection)**:
    * Trong quá trình lập trình thử nghiệm, sửa lỗi nhỏ, chỉnh giao diện: **Bắt buộc giữ nguyên số phiên bản (`version`)** trong `package.json`. Ứng dụng ở các máy người dùng khác sẽ **hoàn toàn không bị làm phiền** hay hiện thông báo cập nhật.
    * **Chỉ nâng version khi phát hành bản lớn**: Chỉ khi nào một cụm tính năng hoàn chỉnh đã được người dùng nghiệm thu và có lệnh phát hành chính thức, lúc đó mới được nâng version trong `package.json` (ví dụ: `1.0.0` -> `1.1.0`) để kích hoạt cơ chế thông báo cập nhật sang máy người dùng.
