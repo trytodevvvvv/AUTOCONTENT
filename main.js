@@ -2,15 +2,72 @@ const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron')
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const { execSync } = require('child_process');
+
+// Helper to compare semantic versions (e.g., '1.1.0' > '1.0.0')
+function compareVersions(v1, v2) {
+  const clean1 = (v1 || '').replace(/^v/i, '').trim();
+  const clean2 = (v2 || '').replace(/^v/i, '').trim();
+  const parts1 = clean1.split('.').map(Number);
+  const parts2 = clean2.split('.').map(Number);
+  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+    const num1 = parts1[i] || 0;
+    const num2 = parts2[i] || 0;
+    if (num1 > num2) return 1;
+    if (num1 < num2) return -1;
+  }
+  return 0;
+}
+
+// ===================================================================
+// HOT-UPDATE BUNDLE HANDOFF (LOADS LATEST CODE FROM USER DATA IF PRESENT)
+// ===================================================================
+let USER_DATA_DIR = '';
+try {
+  USER_DATA_DIR = app.getPath('userData');
+} catch (e) {
+  USER_DATA_DIR = __dirname;
+}
+
+const CURRENT_BUNDLE_DIR = path.join(USER_DATA_DIR, 'current_bundle');
+const BUNDLE_MAIN = path.join(CURRENT_BUNDLE_DIR, 'main.js');
+const BUNDLE_PKG = path.join(CURRENT_BUNDLE_DIR, 'package.json');
+
+if (!process.env.AUTOCONTENT_LOADED_BUNDLE && fs.existsSync(BUNDLE_MAIN) && fs.existsSync(BUNDLE_PKG)) {
+  try {
+    const bundlePkg = JSON.parse(fs.readFileSync(BUNDLE_PKG, 'utf-8'));
+    const basePkg = require(path.join(__dirname, 'package.json'));
+    if (compareVersions(bundlePkg.version, basePkg.version) >= 0) {
+      process.env.AUTOCONTENT_LOADED_BUNDLE = '1';
+      process.env.AUTOCONTENT_APP_PATH = CURRENT_BUNDLE_DIR;
+      require(BUNDLE_MAIN);
+      return;
+    }
+  } catch (err) {
+    console.error('Failed to load hot-update bundle, falling back to base application:', err);
+    try {
+      fs.rmSync(CURRENT_BUNDLE_DIR, { recursive: true, force: true });
+    } catch (e) {}
+  }
+}
+
+// Active root directory (either updated bundle or base app)
+const APP_ROOT = process.env.AUTOCONTENT_APP_PATH || __dirname;
 
 let mainWindow;
 
-const SAVED_APIS_FILE = path.join(__dirname, 'saved_apis.json');
+function getSavedApisPath() {
+  if (app.isPackaged) {
+    return path.join(USER_DATA_DIR, 'saved_apis.json');
+  }
+  return path.join(__dirname, 'saved_apis.json');
+}
 
 function loadSavedApis() {
+  const filePath = getSavedApisPath();
   try {
-    if (fs.existsSync(SAVED_APIS_FILE)) {
-      const data = fs.readFileSync(SAVED_APIS_FILE, 'utf-8');
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf-8');
       return JSON.parse(data);
     }
   } catch (err) {
@@ -26,8 +83,9 @@ function loadSavedApis() {
 }
 
 function saveSavedApis(data) {
+  const filePath = getSavedApisPath();
   try {
-    fs.writeFileSync(SAVED_APIS_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
     return { success: true };
   } catch (err) {
     console.error('Error saving saved_apis.json:', err);
@@ -36,8 +94,8 @@ function saveSavedApis(data) {
 }
 
 function createWindow() {
-  const iconPath = path.join(__dirname, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
-  const fallbackIcon = path.join(__dirname, 'assets', 'icon.png');
+  const iconPath = path.join(APP_ROOT, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
+  const fallbackIcon = path.join(APP_ROOT, 'assets', 'icon.png');
 
   mainWindow = new BrowserWindow({
     width: 1320,
@@ -50,7 +108,7 @@ function createWindow() {
     autoHideMenuBar: true,
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(APP_ROOT, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true
     }
@@ -60,7 +118,7 @@ function createWindow() {
   Menu.setApplicationMenu(null);
   mainWindow.setMenuBarVisibility(false);
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.loadFile(path.join(APP_ROOT, 'renderer', 'index.html'));
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -366,24 +424,55 @@ registerIpcHandler('window-maximize', () => {
 registerIpcHandler('window-close', () => mainWindow?.close());
 
 // ===================================================================
-// GITHUB AUTO-UPDATE SYSTEM (NON-INTRUSIVE & USER-OPTIONAL)
+// GITHUB AUTO-UPDATE & HOT-CODE UPDATE SYSTEM (LIVE OTA)
 // ===================================================================
 const GITHUB_OWNER = 'trytodevvvvv';
 const GITHUB_REPO = 'AUTOCONTENT';
 
-function compareVersions(v1, v2) {
-  const clean1 = (v1 || '').replace(/^v/i, '').trim();
-  const clean2 = (v2 || '').replace(/^v/i, '').trim();
-  const parts1 = clean1.split('.').map(Number);
-  const parts2 = clean2.split('.').map(Number);
-  
-  for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-    const num1 = parts1[i] || 0;
-    const num2 = parts2[i] || 0;
-    if (num1 > num2) return 1;
-    if (num1 < num2) return -1;
-  }
-  return 0;
+function getCurrentlyRunningVersion() {
+  try {
+    const pkgPath = path.join(APP_ROOT, 'package.json');
+    if (fs.existsSync(pkgPath)) {
+      return JSON.parse(fs.readFileSync(pkgPath, 'utf8')).version;
+    }
+  } catch (e) {}
+  return app.getVersion();
+}
+
+function fetchRemotePackageJson() {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'raw.githubusercontent.com',
+      path: `/${GITHUB_OWNER}/${GITHUB_REPO}/main/package.json`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'AutoContent-Studio-App'
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            resolve(null);
+          }
+        } else {
+          resolve(null);
+        }
+      });
+    });
+
+    req.on('error', () => resolve(null));
+    req.setTimeout(6000, () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
 }
 
 function fetchLatestGithubRelease() {
@@ -425,10 +514,41 @@ function fetchLatestGithubRelease() {
 }
 
 async function checkAppUpdates(manual = false) {
-  const currentVersion = app.getVersion();
+  const currentVersion = getCurrentlyRunningVersion();
   try {
-    const release = await fetchLatestGithubRelease();
-    if (!release || !release.tag_name) {
+    const release = await fetchLatestGithubRelease().catch(() => null);
+    let latestVersion = '';
+    let releaseName = '';
+    let releaseNotes = '';
+    let downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
+    let zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/main`;
+
+    if (release && release.tag_name) {
+      latestVersion = release.tag_name.replace(/^v/i, '');
+      releaseName = release.name || `Bản phát hành v${latestVersion}`;
+      releaseNotes = release.body || 'Phiên bản cải tiến hiệu năng và tính năng mới.';
+      downloadUrl = release.html_url;
+
+      if (Array.isArray(release.assets) && release.assets.length > 0) {
+        const exeAsset = release.assets.find(a => a.name && a.name.toLowerCase().endsWith('.exe'));
+        if (exeAsset && exeAsset.browser_download_url) {
+          downloadUrl = exeAsset.browser_download_url;
+        }
+      }
+      zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/${release.tag_name}`;
+    } else {
+      // Fallback: Check package.json on main branch directly
+      const remotePkg = await fetchRemotePackageJson();
+      if (remotePkg && remotePkg.version) {
+        latestVersion = remotePkg.version;
+        releaseName = `Bản cập nhật mã nguồn v${latestVersion}`;
+        releaseNotes = 'Cập nhật trực tiếp mã nguồn mới nhất từ kho lưu trữ GitHub.';
+        downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
+        zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/main`;
+      }
+    }
+
+    if (!latestVersion) {
       return {
         hasUpdate: false,
         currentVersion: `v${currentVersion}`,
@@ -437,27 +557,17 @@ async function checkAppUpdates(manual = false) {
       };
     }
 
-    const latestVersion = release.tag_name.replace(/^v/i, '');
     const isNewer = compareVersions(latestVersion, currentVersion) > 0;
 
     if (isNewer) {
-      let downloadUrl = release.html_url;
-      if (Array.isArray(release.assets) && release.assets.length > 0) {
-        const exeAsset = release.assets.find(a => a.name && a.name.toLowerCase().endsWith('.exe'));
-        if (exeAsset && exeAsset.browser_download_url) {
-          downloadUrl = exeAsset.browser_download_url;
-        }
-      }
-
       const updateData = {
         hasUpdate: true,
         currentVersion: `v${currentVersion}`,
         latestVersion: `v${latestVersion}`,
-        releaseName: release.name || `Bản phát hành v${latestVersion}`,
-        releaseNotes: release.body || 'Phiên bản mới với nhiều cải tiến hiệu năng và tính năng mới.',
-        publishedAt: release.published_at,
-        releaseUrl: release.html_url,
-        downloadUrl: downloadUrl
+        releaseName: releaseName,
+        releaseNotes: releaseNotes,
+        downloadUrl: downloadUrl,
+        zipUrl: zipUrl
       };
 
       if (!manual && mainWindow && !mainWindow.isDestroyed()) {
@@ -482,12 +592,125 @@ async function checkAppUpdates(manual = false) {
   }
 }
 
+function downloadFile(url, destPath) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destPath);
+    const req = https.get(url, { headers: { 'User-Agent': 'AutoContent-Studio-App' } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return downloadFile(res.headers.location, destPath).then(resolve).catch(reject);
+      }
+      if (res.statusCode !== 200) {
+        return reject(new Error(`Tải bản cập nhật thất bại (HTTP ${res.statusCode})`));
+      }
+      res.pipe(file);
+      file.on('finish', () => {
+        file.close(() => resolve(destPath));
+      });
+    });
+
+    req.on('error', (err) => {
+      fs.unlink(destPath, () => {});
+      reject(err);
+    });
+
+    req.setTimeout(25000, () => {
+      req.destroy();
+      reject(new Error('Hết thời gian tải mã nguồn (Timeout)'));
+    });
+  });
+}
+
+function extractZip(zipPath, destDir) {
+  fs.mkdirSync(destDir, { recursive: true });
+  try {
+    execSync(`tar -xf "${zipPath}" -C "${destDir}"`, { stdio: 'pipe' });
+    return true;
+  } catch (err) {
+    try {
+      execSync(`powershell -NoProfile -Command "Expand-Archive -Path '${zipPath}' -DestinationPath '${destDir}' -Force"`, { stdio: 'pipe' });
+      return true;
+    } catch (err2) {
+      throw new Error(`Không thể giải nén bản cập nhật: ${err2.message}`);
+    }
+  }
+}
+
+async function performHotUpdate(zipUrl) {
+  const targetZipUrl = zipUrl || `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/main`;
+  const updateTempZip = path.join(USER_DATA_DIR, 'hot_update_temp.zip');
+  const updateStagingDir = path.join(USER_DATA_DIR, 'hot_update_staging');
+  const targetBundleDir = path.join(USER_DATA_DIR, 'current_bundle');
+
+  try {
+    if (fs.existsSync(updateStagingDir)) {
+      fs.rmSync(updateStagingDir, { recursive: true, force: true });
+    }
+    if (fs.existsSync(updateTempZip)) {
+      fs.unlinkSync(updateTempZip);
+    }
+
+    // Download zip package
+    await downloadFile(targetZipUrl, updateTempZip);
+
+    // Extract zip
+    extractZip(updateTempZip, updateStagingDir);
+
+    // Locate repository root within extraction
+    const entries = fs.readdirSync(updateStagingDir);
+    let sourceDir = updateStagingDir;
+    for (const entry of entries) {
+      const full = path.join(updateStagingDir, entry);
+      if (fs.statSync(full).isDirectory() && fs.existsSync(path.join(full, 'package.json'))) {
+        sourceDir = full;
+        break;
+      }
+    }
+
+    if (!fs.existsSync(path.join(sourceDir, 'package.json')) || !fs.existsSync(path.join(sourceDir, 'main.js'))) {
+      throw new Error('Gói mã nguồn tải về không hợp lệ (thiếu package.json hoặc main.js).');
+    }
+
+    // Deploy to current_bundle
+    if (fs.existsSync(targetBundleDir)) {
+      fs.rmSync(targetBundleDir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(targetBundleDir, { recursive: true });
+    fs.cpSync(sourceDir, targetBundleDir, { recursive: true });
+
+    // Clean temp
+    try {
+      fs.rmSync(updateStagingDir, { recursive: true, force: true });
+      fs.unlinkSync(updateTempZip);
+    } catch (e) {}
+
+    return { success: true };
+  } catch (err) {
+    console.error('Hot Update Error:', err);
+    try {
+      if (fs.existsSync(updateStagingDir)) fs.rmSync(updateStagingDir, { recursive: true, force: true });
+      if (fs.existsSync(updateTempZip)) fs.unlinkSync(updateTempZip);
+    } catch (e) {}
+    return { success: false, error: err.message };
+  }
+}
+
 registerIpcHandler('check-for-updates', async (event, args) => {
   return await checkAppUpdates(args?.manual || false);
 });
 
 registerIpcHandler('get-app-version', () => {
-  return app.getVersion();
+  return getCurrentlyRunningVersion();
+});
+
+registerIpcHandler('apply-hot-update', async (event, args) => {
+  const result = await performHotUpdate(args?.zipUrl);
+  if (result.success) {
+    setTimeout(() => {
+      app.relaunch();
+      app.exit(0);
+    }, 1200);
+  }
+  return result;
 });
 
 app.whenReady().then(() => {

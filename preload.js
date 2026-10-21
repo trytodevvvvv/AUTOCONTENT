@@ -15,5 +15,6 @@ contextBridge.exposeInMainWorld('api', {
   closeWindow: () => ipcRenderer.invoke('window-close'),
   checkForUpdates: (manual) => ipcRenderer.invoke('check-for-updates', { manual }),
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  applyHotUpdate: (zipUrl) => ipcRenderer.invoke('apply-hot-update', { zipUrl }),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_, info) => callback(info))
 });

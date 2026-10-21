@@ -200,6 +200,9 @@ const DOM = {
   btnCloseUpdateModal: document.getElementById('btnCloseUpdateModal'),
   btnPostponeUpdate: document.getElementById('btnPostponeUpdate'),
   btnAcceptUpdate: document.getElementById('btnAcceptUpdate'),
+  btnAcceptUpdateText: document.getElementById('btnAcceptUpdateText'),
+  updateDownloadProgress: document.getElementById('updateDownloadProgress'),
+  linkDownloadExeFallback: document.getElementById('linkDownloadExeFallback'),
 
   // Toast
   toast: document.getElementById('toast'),
@@ -533,6 +536,17 @@ function bindEvents() {
   }
   if (DOM.btnAcceptUpdate) {
     DOM.btnAcceptUpdate.addEventListener('click', acceptUpdate);
+  }
+  if (DOM.linkDownloadExeFallback) {
+    DOM.linkDownloadExeFallback.addEventListener('click', (e) => {
+      e.preventDefault();
+      const targetUrl = state.pendingUpdate?.downloadUrl || state.pendingUpdate?.releaseUrl || 'https://github.com/trytodevvvvv/AUTOCONTENT/releases';
+      if (window.api && window.api.openExternal) {
+        window.api.openExternal(targetUrl);
+      } else {
+        window.open(targetUrl, '_blank');
+      }
+    });
   }
 
   // Note: Backdrop click dismissal removed to prevent accidental closure when scrolling or dragging
@@ -1986,6 +2000,42 @@ function postponeUpdate() {
 async function acceptUpdate() {
   if (!state.pendingUpdate) return;
 
+  // If running inside Electron desktop and applyHotUpdate is available
+  if (window.api && window.api.applyHotUpdate) {
+    if (DOM.btnAcceptUpdate) DOM.btnAcceptUpdate.disabled = true;
+    if (DOM.btnPostponeUpdate) DOM.btnPostponeUpdate.disabled = true;
+    if (DOM.btnAcceptUpdateText) DOM.btnAcceptUpdateText.textContent = 'Đang tải mã nguồn...';
+    if (DOM.updateDownloadProgress) {
+      DOM.updateDownloadProgress.classList.remove('hidden');
+      DOM.updateDownloadProgress.style.color = '#4338CA';
+      DOM.updateDownloadProgress.textContent = '⚡ Đang tải mã nguồn siêu nhẹ (625 KB) và cập nhật hệ thống...';
+    }
+
+    try {
+      const zipUrl = state.pendingUpdate.zipUrl;
+      const res = await window.api.applyHotUpdate(zipUrl);
+      if (res && res.success) {
+        if (DOM.btnAcceptUpdateText) DOM.btnAcceptUpdateText.textContent = '✓ Hoàn tất! Đang khởi động lại...';
+        if (DOM.updateDownloadProgress) {
+          DOM.updateDownloadProgress.style.color = '#059669';
+          DOM.updateDownloadProgress.textContent = '✓ Đã cập nhật thành công! Ứng dụng sẽ tự động mở lại ngay...';
+        }
+        showToast('Cập nhật thành công! Ứng dụng đang khởi động lại...', 'success');
+        return;
+      } else {
+        throw new Error(res?.error || 'Không thể giải nén hoặc áp dụng gói mã nguồn.');
+      }
+    } catch (err) {
+      console.error('Hot Update Error:', err);
+      showToast(`Không thể cập nhật tự động: ${err.message}. Đang mở trang tải bộ cài .exe...`, 'warning');
+      if (DOM.btnAcceptUpdate) DOM.btnAcceptUpdate.disabled = false;
+      if (DOM.btnPostponeUpdate) DOM.btnPostponeUpdate.disabled = false;
+      if (DOM.btnAcceptUpdateText) DOM.btnAcceptUpdateText.textContent = 'Cập nhật siêu tốc (2s)';
+      if (DOM.updateDownloadProgress) DOM.updateDownloadProgress.classList.add('hidden');
+    }
+  }
+
+  // Fallback: Open external download link
   const targetUrl = state.pendingUpdate.downloadUrl || state.pendingUpdate.releaseUrl;
   if (targetUrl && window.api && window.api.openExternal) {
     try {
