@@ -79,3 +79,15 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
    * Bước 2: Thêm file thay đổi: `git add .` (đảm bảo `.gitignore` chặn toàn bộ file dữ liệu người dùng).
    * Bước 3: Tạo commit với thông điệp rõ ràng, chuyên nghiệp.
    * Bước 4: Đẩy lên nhánh chính: `git push origin main`.
+
+---
+
+## 🛑 LUẬT 6: KIỂM SOÁT PHÁT HÀNH & CẤM TỰ ĐỘNG GIT PUSH (NO AUTO-PUSH & RELEASE GATING)
+
+1. **Nghiêm cấm AI tự ý commit hoặc git push**:
+   * Sau khi chỉnh sửa code hoặc thêm tính năng, AI **chỉ được phép lưu file cục bộ** trên máy của lập trình viên để người dùng tự do kiểm tra và thử nghiệm.
+   * **Tuyệt đối cấm** việc tự ý chạy `git commit` hay `git push` nếu người dùng chưa ra lệnh bằng câu từ rõ ràng, chủ động (Ví dụ: *"Hãy đẩy code lên GitHub cho tôi"* hoặc *"Xác nhận phát hành bản mới"*).
+2. **Cơ chế chặn thông báo cập nhật rác sang máy người dùng (Update Spam Protection)**:
+   * Trong quá trình lập trình thử nghiệm, sửa lỗi nhỏ, chỉnh giao diện: **Bắt buộc giữ nguyên số phiên bản (`version`)** trong `package.json`. Ứng dụng ở các máy người dùng khác sẽ **hoàn toàn không bị làm phiền** hay hiện thông báo cập nhật.
+   * **Chỉ nâng version khi phát hành bản lớn**: Chỉ khi nào một cụm tính năng hoàn chỉnh đã được người dùng nghiệm thu và có lệnh phát hành chính thức, lúc đó mới được nâng version trong `package.json` (ví dụ: `1.0.0` -> `1.1.0`) để kích hoạt cơ chế thông báo cập nhật sang máy người dùng.
+
