@@ -38,9 +38,11 @@ Bí quyết nằm ở kiến trúc Mixture of Experts (MoE) cực kỳ tối ưu
 // Gemini API Constants
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
 const GEMINI_DEFAULT_MODELS = [
-  { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash (Khuyên dùng)' },
-  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Tốc độ cao)' },
-  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Suy luận sâu)' }
+  { id: 'gemini-3.8-flash-lite', name: 'Gemini 3.8 Flash Lite (Ưu tiên cao nhất)' },
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash' },
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite' },
+  { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Dự phòng)' }
 ];
 
 function resolveBaseUrl(provider) {
@@ -90,6 +92,8 @@ const DOM = {
   optKeepOriginal: document.getElementById('optKeepOriginal'),
   optEnhanceScript: document.getElementById('optEnhanceScript'),
   optTranslate: document.getElementById('optTranslate'),
+  chkAutoRotateModal: document.getElementById('chkAutoRotateModal'),
+  failoverSettingBox: document.getElementById('failoverSettingBox'),
   langSelectorPanel: document.getElementById('langSelectorPanel'),
   selectTargetLanguage: document.getElementById('selectTargetLanguage'),
 
@@ -258,6 +262,18 @@ function loadSavedPreferences() {
       state.preferences = { ...state.preferences, ...parsed };
     }
   } catch (e) {}
+
+  const isAutoRotate = state.preferences?.autoRotateModels !== false;
+  if (DOM.chkAutoRotateModal) DOM.chkAutoRotateModal.checked = isAutoRotate;
+}
+
+function setAutoRotatePreference(enabled) {
+  state.preferences = state.preferences || {};
+  state.preferences.autoRotateModels = enabled;
+  if (DOM.chkAutoRotateModal) DOM.chkAutoRotateModal.checked = enabled;
+  try {
+    localStorage.setItem('autocontent_preferences', JSON.stringify(state.preferences));
+  } catch (e) {}
 }
 
 // Bind all UI Event Listeners
@@ -366,6 +382,12 @@ function bindEvents() {
       DOM.langSelectorPanel.classList.remove('visible');
     }
   });
+
+  if (DOM.chkAutoRotateModal) {
+    DOM.chkAutoRotateModal.addEventListener('change', () => {
+      setAutoRotatePreference(DOM.chkAutoRotateModal.checked);
+    });
+  }
 
   // Advanced Options Accordion
   DOM.btnToggleAdvanced.addEventListener('click', () => {
@@ -664,11 +686,43 @@ async function startGeneration() {
     return;
   }
 
-  const modelId = state.settings.activeModelId || (provider.models[0] && provider.models[0].id);
-  if (!modelId) {
+  const isGemini = (provider.providerType === 'gemini')
+    || (provider.apiKey && provider.apiKey.trim().startsWith('AIzaSy'))
+    || (provider.baseUrl && provider.baseUrl.includes('googleapis.com'));
+
+  // Collect candidate models for failover/rotation
+  let candidateModels = [];
+  if (provider.models && provider.models.length > 0) {
+    candidateModels = provider.models.map(m => (typeof m === 'string' ? m : m.id)).filter(Boolean);
+  } else if (isGemini) {
+    candidateModels = GEMINI_DEFAULT_MODELS.map(m => m.id);
+  }
+
+  const initialModelId = state.settings.activeModelId || candidateModels[0];
+  if (!initialModelId && candidateModels.length === 0) {
     showToast('Chưa chọn model AI nào!', 'warning');
     openSettingsModal(provider.id);
     return;
+  }
+
+  // Order candidate models starting from the selected model, followed by the rest
+  if (candidateModels.length > 1 && initialModelId) {
+    const idx = candidateModels.indexOf(initialModelId);
+    if (idx > 0) {
+      candidateModels = [...candidateModels.slice(idx), ...candidateModels.slice(0, idx)];
+    }
+  } else if (candidateModels.length === 0) {
+    candidateModels = [initialModelId];
+  }
+
+  // Smart Failover ONLY applies to Google Gemini (Cách 2)
+  const isAutoRotateEnabled = isGemini 
+    && (DOM.chkAutoRotateModal ? DOM.chkAutoRotateModal.checked : true)
+    && (state.preferences?.autoRotateModels !== false);
+
+  if (!isAutoRotateEnabled) {
+    // Rotation disabled OR not Google Gemini: strictly stick to the single selected model!
+    candidateModels = [initialModelId];
   }
 
   // Build Prompts with strict PURE SCRIPT requirements (matching user Image 4)
@@ -706,77 +760,132 @@ async function startGeneration() {
     const baseUrl = resolveBaseUrl(provider);
     const endpoint = `${baseUrl}/chat/completions`;
 
-    const payload = {
-      model: modelId,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.7,
-      stream: true
-    };
+    let lastError = null;
+    let generationSucceeded = false;
 
-    DOM.outputStatusText.textContent = 'Đang kết nối API...';
+    // Failover Loop: Try candidate models from highest priority down
+    for (let mIdx = 0; mIdx < candidateModels.length; mIdx++) {
+      const currentModel = candidateModels[mIdx];
+      if (state.abortController?.signal?.aborted) break;
 
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${provider.apiKey}`
-      },
-      body: JSON.stringify(payload),
-      signal: state.abortController.signal
-    });
+      // Sync active model state & UI
+      state.settings.activeModelId = currentModel;
+      updateHeaderActiveModel();
 
-    if (!response.ok) {
-      let errDetails = `HTTP ${response.status}: ${response.statusText}`;
+      if (mIdx > 0) {
+        DOM.outputStatusText.textContent = `Đang chuyển sang ${currentModel}...`;
+        showToast(`🔄 Model trước hết token/bận, tự động chuyển sang ${currentModel}...`, 'info');
+      } else {
+        DOM.outputStatusText.textContent = `Đang kết nối API (${currentModel})...`;
+      }
+
+      const payload = {
+        model: currentModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        stream: true
+      };
+
+      let response;
       try {
-        const errJson = await response.json();
-        if (errJson.error && errJson.error.message) {
-          errDetails = errJson.error.message;
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${provider.apiKey}`
+          },
+          body: JSON.stringify(payload),
+          signal: state.abortController.signal
+        });
+      } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError') throw fetchErr;
+        lastError = fetchErr;
+        if (mIdx < candidateModels.length - 1) {
+          await new Promise(r => setTimeout(r, 400));
+          continue;
         }
-      } catch (e) {}
-      throw new Error(errDetails);
-    }
+        throw fetchErr;
+      }
 
-    DOM.outputStatusText.textContent = 'Đang viết kịch bản...';
-
-    // Handle Streaming Response (Server-Sent Events)
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop(); // keep last unfinished line
-
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || !trimmed.startsWith('data:')) continue;
-        if (trimmed === 'data: [DONE]') continue;
-
+      if (!response.ok) {
+        let errDetails = `HTTP ${response.status}: ${response.statusText}`;
         try {
-          const jsonStr = trimmed.replace(/^data:\s*/, '');
-          const parsed = JSON.parse(jsonStr);
-          const delta = parsed.choices?.[0]?.delta;
-
-          // Extract content or reasoning_content
-          const content = delta?.content || delta?.text || '';
-          if (content) {
-            appendOutputChunk(content);
+          const errJson = await response.json();
+          if (errJson.error && errJson.error.message) {
+            errDetails = errJson.error.message;
           }
-        } catch (err) {
-          // ignore incomplete json chunk
+        } catch (e) {}
+
+        // If unauthorized, stop immediately (wrong API Key won't be fixed by changing model)
+        if (response.status === 401 || (response.status === 403 && !errDetails.toLowerCase().includes('quota'))) {
+          throw new Error(`API Key không hợp lệ hoặc bị từ chối (${errDetails}).`);
+        }
+
+        // Recoverable failover errors: 429 (Rate Limit / Quota), 502/503/504 (Overload), 404 (Model unavail)
+        const isRecoverable = (response.status === 429 || response.status === 503 || response.status === 502 || response.status === 504 || response.status === 404)
+          || /quota|rate.?limit|resource_exhausted|overloaded|capacity|tokens|exhausted/i.test(errDetails);
+
+        if (isRecoverable && mIdx < candidateModels.length - 1) {
+          console.warn(`Model ${currentModel} gặp lỗi (${errDetails}), xoay vòng sang model tiếp theo...`);
+          lastError = new Error(`Model ${currentModel}: ${errDetails}`);
+          await new Promise(r => setTimeout(r, 400));
+          continue; // Try next model in sequence
+        } else {
+          if (mIdx > 0 && isRecoverable) {
+            throw new Error(`Toàn bộ danh sách ${candidateModels.length} model trong API Key này đều đã hết hạn ngạch token (${errDetails}).`);
+          }
+          throw new Error(errDetails);
         }
       }
+
+      DOM.outputStatusText.textContent = `Đang viết kịch bản (${currentModel})...`;
+
+      // Handle Streaming Response (Server-Sent Events)
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep last unfinished line
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+          if (trimmed === 'data: [DONE]') continue;
+
+          try {
+            const jsonStr = trimmed.replace(/^data:\s*/, '');
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta;
+
+            // Extract content or reasoning_content
+            const content = delta?.content || delta?.text || '';
+            if (content) {
+              appendOutputChunk(content);
+            }
+          } catch (err) {
+            // ignore incomplete json chunk
+          }
+        }
+      }
+
+      // Flush any pending frame to guarantee 100% of generated content is rendered
+      flushStreamRender();
+      generationSucceeded = true;
+      break; // Successfully generated! Exit loop
     }
 
-    // Flush any pending frame to guarantee 100% of generated content is rendered
-    flushStreamRender();
+    if (!generationSucceeded && lastError) {
+      throw lastError;
+    }
 
     // Finished
     DOM.outputStatusBadge.className = 'output-status-pill completed';
@@ -1192,6 +1301,7 @@ function setProviderType(type, autoFillDefaults = false) {
   if (DOM.groupBaseUrl) DOM.groupBaseUrl.classList.toggle('hidden', isGemini);
   if (DOM.geminiAutoNotice) DOM.geminiAutoNotice.classList.toggle('hidden', !isGemini);
   if (DOM.linkGetGeminiKey) DOM.linkGetGeminiKey.classList.toggle('hidden', !isGemini);
+  if (DOM.failoverSettingBox) DOM.failoverSettingBox.classList.toggle('hidden', !isGemini);
 
   if (isGemini) {
     DOM.cfgApiKey.placeholder = 'Dán API Key (Google Gemini, OpenAI, Groq, OpenRouter...)';
@@ -1270,7 +1380,7 @@ function loadEditingProviderIntoModal() {
 
   // Render Models list (strictly isolated: if Gemini, load Gemini models; if OpenAI, keep OpenAI models)
   let modelsToRender = provider.models || [];
-  if (isGemini && modelsToRender.length === 0) {
+  if (isGemini && (modelsToRender.length === 0 || modelsToRender.some(m => m.id === 'gemini-2.0-flash' || m.id === 'gemini-1.5-flash'))) {
     modelsToRender = [...GEMINI_DEFAULT_MODELS];
     provider.models = modelsToRender;
   }

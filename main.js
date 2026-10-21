@@ -285,7 +285,7 @@ registerIpcHandler('test-connection', async (event, provider) => {
       const chatController = new AbortController();
       const chatTimeout = setTimeout(() => chatController.abort(), 10000);
       try {
-        const testModel = (provider.models && provider.models[0]?.id) || (isGemini ? 'gemini-1.5-flash' : 'default');
+        const testModel = (provider.models && provider.models[0]?.id) || (isGemini ? 'gemini-3.8-flash-lite' : 'default');
         const chatRes = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
           headers: {
@@ -441,12 +441,14 @@ function getCurrentlyRunningVersion() {
 
 function fetchRemotePackageJson() {
   return new Promise((resolve) => {
+    const timestamp = Date.now();
     const options = {
       hostname: 'raw.githubusercontent.com',
-      path: `/${GITHUB_OWNER}/${GITHUB_REPO}/main/package.json`,
+      path: `/${GITHUB_OWNER}/${GITHUB_REPO}/main/package.json?_t=${timestamp}`,
       method: 'GET',
       headers: {
-        'User-Agent': 'AutoContent-Studio-App'
+        'User-Agent': 'AutoContent-Studio-App',
+        'Cache-Control': 'no-cache'
       }
     };
 
@@ -463,6 +465,43 @@ function fetchRemotePackageJson() {
         } else {
           resolve(null);
         }
+      });
+    });
+
+    req.on('error', () => resolve(null));
+    req.setTimeout(6000, () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.end();
+  });
+}
+
+function fetchLatestGithubTag() {
+  return new Promise((resolve) => {
+    const options = {
+      hostname: 'api.github.com',
+      path: `/repos/${GITHUB_OWNER}/${GITHUB_REPO}/tags`,
+      method: 'GET',
+      headers: {
+        'User-Agent': 'AutoContent-Studio-App'
+      }
+    };
+
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          try {
+            const tags = JSON.parse(data);
+            if (Array.isArray(tags) && tags.length > 0 && tags[0].name) {
+              resolve(tags[0]);
+              return;
+            }
+          } catch (e) {}
+        }
+        resolve(null);
       });
     });
 
@@ -537,14 +576,24 @@ async function checkAppUpdates(manual = false) {
       }
       zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/${release.tag_name}`;
     } else {
-      // Fallback: Check package.json on main branch directly
-      const remotePkg = await fetchRemotePackageJson();
-      if (remotePkg && remotePkg.version) {
-        latestVersion = remotePkg.version;
-        releaseName = `Bản cập nhật mã nguồn v${latestVersion}`;
+      // 1st Fallback: Check newest Git Tag directly
+      const latestTag = await fetchLatestGithubTag().catch(() => null);
+      if (latestTag && latestTag.name) {
+        latestVersion = latestTag.name.replace(/^v/i, '');
+        releaseName = `Bản cập nhật v${latestVersion}`;
         releaseNotes = 'Cập nhật trực tiếp mã nguồn mới nhất từ kho lưu trữ GitHub.';
-        downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
-        zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/main`;
+        downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tag/${latestTag.name}`;
+        zipUrl = latestTag.zipball_url || `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/${latestTag.name}`;
+      } else {
+        // 2nd Fallback: Check package.json on main branch directly (cache-busting)
+        const remotePkg = await fetchRemotePackageJson();
+        if (remotePkg && remotePkg.version) {
+          latestVersion = remotePkg.version;
+          releaseName = `Bản cập nhật mã nguồn v${latestVersion}`;
+          releaseNotes = 'Cập nhật trực tiếp mã nguồn mới nhất từ kho lưu trữ GitHub.';
+          downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
+          zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/main`;
+        }
       }
     }
 

@@ -498,6 +498,28 @@
 
               <div class="divider-line"></div>
 
+              <!-- Smart Failover Auto-Rotation Toggle in Modal (Google Gemini Only) -->
+              <div class="failover-setting-box hidden" id="failoverSettingBox">
+                <div class="failover-box-left">
+                  <div class="failover-box-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="failover-box-icon">
+                      <polyline points="23 4 23 10 17 10"></polyline>
+                      <polyline points="1 20 1 14 7 14"></polyline>
+                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                    </svg>
+                    <span>Tự động xoay vòng model Google Gemini khi hết token</span>
+                    <span class="badge-soft green">Khuyên dùng</span>
+                  </div>
+                  <p class="failover-box-desc">
+                    Tự động luân chuyển giữa 5 model Gemini (3.8 &rarr; 3.6 &rarr; 3.5 &rarr; 3.1 &rarr; 2.5) khi gặp lỗi hết hạn ngạch (429) hoặc quá tải.
+                  </p>
+                </div>
+                <label class="toggle-switch-ui" for="chkAutoRotateModal">
+                  <input type="checkbox" id="chkAutoRotateModal" checked>
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
               <!-- Models Section -->
               <div class="models-catalog-section">
                 <div class="models-catalog-header">

@@ -2046,6 +2046,101 @@ input, textarea, select, button {
   margin: 6px 0;
 }
 
+/* Smart Failover Box in Settings Modal */
+.failover-setting-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 12px 0 16px 0;
+  transition: all 0.2s ease;
+}
+
+.failover-setting-box:hover {
+  background: #F1F5F9;
+  border-color: #CBD5E1;
+}
+
+.failover-box-left {
+  flex: 1;
+}
+
+.failover-box-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.failover-box-icon {
+  width: 16px;
+  height: 16px;
+  color: #6366F1;
+  flex-shrink: 0;
+}
+
+.failover-box-desc {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Custom Sleek Toggle Switch */
+.toggle-switch-ui {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.toggle-switch-ui input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #CBD5E1;
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 24px;
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch-ui input:checked + .switch-slider {
+  background-color: #6366F1;
+}
+
+.toggle-switch-ui input:checked + .switch-slider:before {
+  transform: translateX(20px);
+}
+
 /* Models Catalog */
 .models-catalog-section {
   display: flex;

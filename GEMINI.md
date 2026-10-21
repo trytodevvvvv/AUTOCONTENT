@@ -73,12 +73,31 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
 ## 🚀 LUẬT 5: QUY TRÌNH NÂNG CẤP & ĐỒNG BỘ GITHUB (RELEASE WORKFLOW)
 
 1. **Quản lý phiên bản**:
-   * Khi cập nhật hoặc thêm tính năng mới, nâng version tương ứng trong `package.json` theo chuẩn Semantic Versioning (`1.0.0` -> `1.0.1` -> `1.1.0`).
-2. **Quy trình đẩy code**:
-   * Bước 1: Kiểm tra trạng thái file bằng `git status`.
-   * Bước 2: Thêm file thay đổi: `git add .` (đảm bảo `.gitignore` chặn toàn bộ file dữ liệu người dùng).
-   * Bước 3: Tạo commit với thông điệp rõ ràng, chuyên nghiệp.
-   * Bước 4: Đẩy lên nhánh chính: `git push origin main`.
+   * Khi cập nhật hoặc thêm tính năng mới, nâng version tương ứng trong `package.json` theo chuẩn Semantic Versioning (`1.0.0` -> `1.1.0` -> `1.1.1`...).
+2. **Quy trình phát hành 4 bước chuẩn hóa (Standard 4-Step Release Pipeline)**:
+   * **Bước 1 (Kiểm tra & Stage file)**:
+     ```bash
+     git status
+     git diff --cached
+     git add .
+     ```
+     *(Đảm bảo `.gitignore` chặn tuyệt đối file `saved_apis.json`, `.env` và không rò rỉ bất kỳ thông tin nhạy cảm nào).*
+   * **Bước 2 (Tạo Commit & Push nhánh chính)**:
+     ```bash
+     git commit -m "feat/fix: mô tả chi tiết nội dung thay đổi"
+     git push origin main
+     ```
+   * **Bước 3 (Gắn Git Tag & Kích hoạt GitHub Release)**:
+     * Tạo tag và đẩy lên GitHub:
+       ```bash
+       git tag vX.Y.Z
+       git push origin vX.Y.Z
+       ```
+     * **BẮT BUỘC: Tạo bản GitHub Release chính thức**:
+       * *Lý do*: API `/repos/.../releases/latest` của GitHub chỉ hoạt động khi có Release được publish (nếu chỉ push tag thông thường thì API sẽ trả về `404 Not Found` khiến máy người dùng không nhận diện được bản mới).
+       * *Cách thực hiện*: Truy cập `https://github.com/trytodevvvvv/AUTOCONTENT/releases/new`, chọn tag `vX.Y.Z`, đặt tiêu đề `AutoContent Studio vX.Y.Z`, điền ghi chú tóm tắt và bấm **Publish release** (hoặc gọi API tạo release qua token máy dev).
+   * **Bước 4 (Phân phối tự động OTA)**:
+     * Toàn bộ máy người dùng khi mở ứng dụng hoặc bấm "Kiểm tra cập nhật" sẽ nhận được thông báo bản mới ngay lập tức.
 
 ---
 
@@ -93,13 +112,17 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
 
 ---
 
-## ⚡ LUẬT 7: PHÂN PHỐI 1 LẦN & CẬP NHẬT TỰ ĐỘNG QUA GITHUB (ONE-TIME PACKAGING & CLOUD UPDATE)
+## ⚡ LUẬT 7: PHÂN PHỐI 1 LẦN & CẬP NHẬT TỰ ĐỘNG QUA GITHUB (ONE-TIME PACKAGING & HOT-UPDATE OTA)
 
 1. **Đóng gói file `.exe` chỉ cần thực hiện 1 lần duy nhất**:
-   * Việc build file cài đặt `.exe` chỉ phục vụ việc bàn giao ứng dụng cho người dùng ở lần đầu tiên xuất xưởng.
+   * Việc build file cài đặt `.exe` bằng `Dong-Goi-Ung-Dung.bat` chỉ phục vụ việc bàn giao ứng dụng cho người dùng ở lần đầu tiên xuất xưởng.
 2. **Không cần đóng gói lại khi có bản cập nhật (Zero Re-packaging Delivery)**:
    * Khi cập nhật thêm tính năng mới hoặc sửa lỗi, **tuyệt đối không cần phải đóng gói lại file `.exe` thủ công** để gửi lại qua Zalo/Drive cho người dùng.
-   * Chỉ cần nâng `version` trong `package.json` và đẩy lên GitHub (tạo GitHub Release), ứng dụng trên máy người dùng sẽ **tự động phát hiện và cập nhật trực tiếp qua GitHub**.
-   * Giúp tác giả tiết kiệm thời gian, không tốn công nén build nhiều lần, và người dùng luôn tự động được cập nhật phiên bản mới nhất mà vẫn giữ nguyên API Key của họ.
+   * Chỉ cần tuân thủ Quy trình 4 bước tại **Luật 5** (Nâng version -> Push main -> Push tag -> Publish Release).
+3. **Cơ chế nạp mã nguồn Hot-Update OTA (Over-The-Air)**:
+   * Khi người dùng bấm **"Cập nhật siêu tốc"** trong app, ứng dụng sẽ tự động tải gói mã nguồn siêu nhẹ (~600 KB) từ GitHub về thư mục an toàn `userData/current_bundle`.
+   * Ứng dụng tự động khởi động lại sau 1.2 giây và nạp ngay mã nguồn mới nhất.
+   * Toàn bộ file cấu hình `saved_apis.json`, khóa API Key, model đang chọn và thiết lập cá nhân của người dùng được bảo toàn 100%, không bị ảnh hưởng.
+
 
 
