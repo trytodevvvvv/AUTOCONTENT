@@ -11,6 +11,16 @@
 </head>
 <body>
   <div class="app-shell">
+    <!-- Dedicated Window Title Bar (Light Pastel Style) -->
+    <div class="window-titlebar" id="windowTitlebar">
+      <div class="titlebar-drag-area">
+        <div class="titlebar-brand">
+          <img src="../assets/icon.png" alt="AutoContent Icon" class="titlebar-icon">
+          <span class="titlebar-title">AutoContent Studio - AI Scriptwriter</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Top Navigation Bar -->
     <header class="app-header">
       <div class="header-left">
@@ -731,17 +741,20 @@
         </div>
 
         <div class="update-modal-footer">
-          <button class="btn-secondary" id="btnPostponeUpdate" type="button">Để sau</button>
-          <button class="btn-primary" id="btnAcceptUpdate" type="button">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
+          <button class="btn-update-cancel" id="btnPostponeUpdate" type="button">Để sau</button>
+          <button class="btn-update-accept" id="btnAcceptUpdate" type="button">
+            <svg class="btn-update-icon" viewBox="0 0 24 24" fill="none">
+              <defs>
+                <linearGradient id="lightningGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#FEF08A" />
+                  <stop offset="35%" stop-color="#FACC15" />
+                  <stop offset="100%" stop-color="#F59E0B" />
+                </linearGradient>
+              </defs>
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" fill="url(#lightningGrad)" stroke="#D97706" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
             <span id="btnAcceptUpdateText">Cập nhật siêu tốc (2s)</span>
           </button>
-        </div>
-
-        <div style="text-align: center; padding-bottom: 14px; font-size: 11.5px;">
-          <a href="#" id="linkDownloadExeFallback" style="color: #64748B; text-decoration: underline;" title="Tải file .exe truyền thống nếu không muốn cập nhật tự động">Hoặc tải file cài đặt .exe thủ công từ GitHub ↗</a>
         </div>
       </div>
     </div>

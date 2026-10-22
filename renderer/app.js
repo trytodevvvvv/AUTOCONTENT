@@ -206,7 +206,6 @@ const DOM = {
   btnAcceptUpdate: document.getElementById('btnAcceptUpdate'),
   btnAcceptUpdateText: document.getElementById('btnAcceptUpdateText'),
   updateDownloadProgress: document.getElementById('updateDownloadProgress'),
-  linkDownloadExeFallback: document.getElementById('linkDownloadExeFallback'),
 
   // Toast
   toast: document.getElementById('toast'),
@@ -558,17 +557,6 @@ function bindEvents() {
   }
   if (DOM.btnAcceptUpdate) {
     DOM.btnAcceptUpdate.addEventListener('click', acceptUpdate);
-  }
-  if (DOM.linkDownloadExeFallback) {
-    DOM.linkDownloadExeFallback.addEventListener('click', (e) => {
-      e.preventDefault();
-      const targetUrl = state.pendingUpdate?.downloadUrl || state.pendingUpdate?.releaseUrl || 'https://github.com/trytodevvvvv/AUTOCONTENT/releases';
-      if (window.api && window.api.openExternal) {
-        window.api.openExternal(targetUrl);
-      } else {
-        window.open(targetUrl, '_blank');
-      }
-    });
   }
 
   // Note: Backdrop click dismissal removed to prevent accidental closure when scrolling or dragging

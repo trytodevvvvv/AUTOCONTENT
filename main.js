@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -97,15 +97,23 @@ function createWindow() {
   const iconPath = path.join(APP_ROOT, 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
   const fallbackIcon = path.join(APP_ROOT, 'assets', 'icon.png');
 
+  const isWindows = process.platform === 'win32';
+
   mainWindow = new BrowserWindow({
     width: 1320,
     height: 880,
     minWidth: 1080,
     minHeight: 700,
     title: 'AutoContent Studio - AI Scriptwriter',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FAF5FF',
     icon: fs.existsSync(iconPath) ? iconPath : fallbackIcon,
     autoHideMenuBar: true,
+    titleBarStyle: isWindows ? 'hidden' : 'default',
+    titleBarOverlay: isWindows ? {
+      color: '#FAF5FF',
+      symbolColor: '#334155',
+      height: 32
+    } : false,
     show: false,
     webPreferences: {
       preload: path.join(APP_ROOT, 'preload.js'),
@@ -137,6 +145,24 @@ function registerIpcHandler(channel, handler) {
 }
 
 // IPC Handlers
+registerIpcHandler('window-minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+
+registerIpcHandler('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+registerIpcHandler('window-close', () => {
+  if (mainWindow) mainWindow.close();
+});
+
 registerIpcHandler('get-saved-apis', () => {
   return loadSavedApis();
 });
@@ -763,6 +789,7 @@ registerIpcHandler('apply-hot-update', async (event, args) => {
 });
 
 app.whenReady().then(() => {
+  nativeTheme.themeSource = 'light';
   if (process.platform === 'win32') {
     app.setAppUserModelId('com.autocontent.studio');
   }
