@@ -663,25 +663,103 @@ input, textarea, select, button {
   overflow-y: auto;
 }
 
-/* Custom Scrollbar */
+/* ===================================================================
+   FLOATING INSET CYBER NEON SCROLLBAR SYSTEM (UNIVERSAL & TEXTAREAS)
+   =================================================================== */
+/* Universal Scrollbar Width for All Containers, Textareas & Modals */
+::-webkit-scrollbar,
+*::-webkit-scrollbar,
+#inputOriginal::-webkit-scrollbar,
 .panel-input::-webkit-scrollbar,
 .output-scroll-container::-webkit-scrollbar,
-.modal-body::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+.modal-body::-webkit-scrollbar,
+.quick-menu-list::-webkit-scrollbar,
+.models-list-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
+/* Eliminate Clunky Windows Up/Down Arrow Buttons */
+::-webkit-scrollbar-button,
+*::-webkit-scrollbar-button,
+#inputOriginal::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Floating Track with Safe Top/Bottom Inset Margins to avoid corner radius clipping */
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track,
+#inputOriginal::-webkit-scrollbar-track,
+.panel-input::-webkit-scrollbar-track,
+.output-scroll-container::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+  margin: 10px 0; /* Đệm cách đỉnh và đáy 10px để hoàn toàn không bị lấn ra góc bo tròn */
+}
+
+::-webkit-scrollbar-track:hover,
+*::-webkit-scrollbar-track:hover,
+#inputOriginal::-webkit-scrollbar-track:hover {
+  background: rgba(238, 242, 255, 0.4);
+}
+
+/* Specific Extra Margin for Large Panels (border-radius: 18px) */
+.panel-input::-webkit-scrollbar-track,
+.output-scroll-container::-webkit-scrollbar-track {
+  margin: 12px 0;
+}
+
+/* Floating Pill Thumb: Inset from edge with 2px transparent buffer and full pill curve */
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb,
+#inputOriginal::-webkit-scrollbar-thumb,
 .panel-input::-webkit-scrollbar-thumb,
 .output-scroll-container::-webkit-scrollbar-thumb,
-.modal-body::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 10px;
+.modal-body::-webkit-scrollbar-thumb,
+.quick-menu-list::-webkit-scrollbar-thumb,
+.models-list-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.45) 0%, rgba(139, 92, 246, 0.45) 100%);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: all 0.22s var(--ease-spring);
 }
 
+/* Hover: Bừng sáng Gradient Neon Tím - Hồng Ánh Kim */
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover,
+#inputOriginal::-webkit-scrollbar-thumb:hover,
 .panel-input::-webkit-scrollbar-thumb:hover,
 .output-scroll-container::-webkit-scrollbar-thumb:hover,
-.modal-body::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+.modal-body::-webkit-scrollbar-thumb:hover,
+.quick-menu-list::-webkit-scrollbar-thumb:hover,
+.models-list-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+/* Active Dragging: Siêu rực rỡ và bám tay */
+::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active,
+#inputOriginal::-webkit-scrollbar-thumb:active,
+.panel-input::-webkit-scrollbar-thumb:active,
+.output-scroll-container::-webkit-scrollbar-thumb:active,
+.modal-body::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #4F46E5 0%, #7C3AED 50%, #D946EF 100%);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  box-shadow: 0 0 14px rgba(124, 58, 237, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* Corner junction */
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Textarea Wrapper */

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Menu, nativeTheme, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
@@ -33,12 +33,15 @@ const CURRENT_BUNDLE_DIR = path.join(USER_DATA_DIR, 'current_bundle');
 const BUNDLE_MAIN = path.join(CURRENT_BUNDLE_DIR, 'main.js');
 const BUNDLE_PKG = path.join(CURRENT_BUNDLE_DIR, 'package.json');
 
-if (!process.env.AUTOCONTENT_LOADED_BUNDLE && fs.existsSync(BUNDLE_MAIN) && fs.existsSync(BUNDLE_PKG)) {
+// Check if current context is already executing inside the bundle (prevents self-require recursion)
+const isAlreadyRunningBundle = path.resolve(__dirname).toLowerCase() === path.resolve(CURRENT_BUNDLE_DIR).toLowerCase();
+
+if (!isAlreadyRunningBundle && fs.existsSync(BUNDLE_MAIN) && fs.existsSync(BUNDLE_PKG)) {
   try {
     const bundlePkg = JSON.parse(fs.readFileSync(BUNDLE_PKG, 'utf-8'));
-    const basePkg = require(path.join(__dirname, 'package.json'));
+    const basePkgPath = path.join(__dirname, 'package.json');
+    const basePkg = fs.existsSync(basePkgPath) ? JSON.parse(fs.readFileSync(basePkgPath, 'utf-8')) : { version: '0.0.0' };
     if (compareVersions(bundlePkg.version, basePkg.version) >= 0) {
-      process.env.AUTOCONTENT_LOADED_BUNDLE = '1';
       process.env.AUTOCONTENT_APP_PATH = CURRENT_BUNDLE_DIR;
       require(BUNDLE_MAIN);
       return;
@@ -52,7 +55,7 @@ if (!process.env.AUTOCONTENT_LOADED_BUNDLE && fs.existsSync(BUNDLE_MAIN) && fs.e
 }
 
 // Active root directory (either updated bundle or base app)
-const APP_ROOT = process.env.AUTOCONTENT_APP_PATH || __dirname;
+const APP_ROOT = isAlreadyRunningBundle ? __dirname : (process.env.AUTOCONTENT_APP_PATH || __dirname);
 
 let mainWindow;
 
@@ -125,6 +128,10 @@ function createWindow() {
   // Completely remove and hide the default File, Edit, View, Window menu
   Menu.setApplicationMenu(null);
   mainWindow.setMenuBarVisibility(false);
+
+  if (mainWindow.webContents && mainWindow.webContents.session) {
+    mainWindow.webContents.session.clearCache().catch(() => {});
+  }
 
   mainWindow.loadFile(path.join(APP_ROOT, 'renderer', 'index.html'));
 
@@ -780,6 +787,21 @@ registerIpcHandler('get-app-version', () => {
 registerIpcHandler('apply-hot-update', async (event, args) => {
   const result = await performHotUpdate(args?.zipUrl);
   if (result.success) {
+    try {
+      if (session && session.defaultSession) {
+        await session.defaultSession.clearCache();
+        await session.defaultSession.clearStorageData({
+          storages: ['serviceworkers', 'cachestorage']
+        });
+      }
+    } catch (e) {
+      console.warn('Cache clear error:', e);
+    }
+
+    // Clean env flags before relaunch so the new instance starts completely fresh
+    delete process.env.AUTOCONTENT_LOADED_BUNDLE;
+    delete process.env.AUTOCONTENT_APP_PATH;
+
     setTimeout(() => {
       app.relaunch();
       app.exit(0);
