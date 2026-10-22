@@ -559,6 +559,11 @@ function bindEvents() {
     DOM.btnAcceptUpdate.addEventListener('click', acceptUpdate);
   }
 
+  // Click toast to dismiss instantly
+  if (DOM.toast) {
+    DOM.toast.addEventListener('click', dismissToast);
+  }
+
   // Note: Backdrop click dismissal removed to prevent accidental closure when scrolling or dragging
 }
 
@@ -1752,7 +1757,7 @@ function renderQuickApiMenu() {
         DOM.quickApiMenu.classList.add('hidden');
         if (DOM.pillChevron) DOM.pillChevron.classList.remove('rotate');
         checkReadiness();
-        showToast(`Đã chuyển sang ${prov.displayName || prov.id} (${model.name || model.id})`, 'success');
+        showToast(`Đã chuyển sang ${prov.displayName || prov.id} (${model.name || model.id})`, 'success', 1500);
       });
 
       group.appendChild(item);
@@ -2180,30 +2185,47 @@ async function acceptUpdate() {
 // TOAST NOTIFICATIONS
 // ===================================================================
 let toastTimeout = null;
-function showToast(message, type = 'success') {
+function showToast(message, type = 'success', duration = 1500) {
   if (toastTimeout) clearTimeout(toastTimeout);
 
   DOM.toastMsg.textContent = message;
 
+  DOM.toast.classList.remove('success', 'warning', 'danger', 'info', 'hiding');
+  DOM.toast.classList.add(type);
+
   if (type === 'success') {
     DOM.toastIcon.textContent = '✓';
-    DOM.toastIcon.style.background = '#10B981';
+    DOM.toastIcon.style.background = 'rgba(16, 185, 129, 0.35)';
   } else if (type === 'warning') {
     DOM.toastIcon.textContent = '!';
-    DOM.toastIcon.style.background = '#F59E0B';
+    DOM.toastIcon.style.background = 'rgba(245, 158, 11, 0.35)';
   } else if (type === 'danger') {
     DOM.toastIcon.textContent = '✕';
-    DOM.toastIcon.style.background = '#EF4444';
+    DOM.toastIcon.style.background = 'rgba(239, 68, 68, 0.35)';
   } else {
     DOM.toastIcon.textContent = 'i';
-    DOM.toastIcon.style.background = '#3B82F6';
+    DOM.toastIcon.style.background = 'rgba(99, 102, 241, 0.35)';
   }
 
   DOM.toast.classList.remove('hidden');
 
   toastTimeout = setTimeout(() => {
-    DOM.toast.classList.add('hidden');
-  }, 3500);
+    dismissToast();
+  }, duration);
+}
+
+function dismissToast() {
+  if (toastTimeout) {
+    clearTimeout(toastTimeout);
+    toastTimeout = null;
+  }
+  if (DOM.toast && !DOM.toast.classList.contains('hidden')) {
+    DOM.toast.classList.add('hiding');
+    setTimeout(() => {
+      DOM.toast.classList.add('hidden');
+      DOM.toast.classList.remove('hiding');
+    }, 200);
+  }
 }
 
 // Start Application
