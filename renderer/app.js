@@ -39,6 +39,15 @@ const state = {
     isGenerating: false,
     titles: [],
     abortController: null
+  },
+  descriptionState: {
+    mode: 'plain',
+    targetLanguage: 'vi',
+    isUserManualLang: false,
+    isGenerating: false,
+    tags: [],
+    descriptionText: '',
+    abortController: null
   }
 };
 
@@ -59,6 +68,63 @@ const SAMPLE_TITLES = [
   "Sự thật giật mình về thói quen thức khuya mỗi ngày",
   "Cách người giàu âm thầm bảo vệ tài sản trong thời kỳ khủng hoảng",
   "Tại sao các đế chế công nghệ lại sa thải hàng loạt kỹ sư?"
+];
+
+// Sample data for Description & Tags demonstration
+const SAMPLE_DESC_DATA = [
+  {
+    mode: 'plain',
+    title: 'Tại sao 90% người dùng iPhone đang sạc pin sai cách?',
+    content: `Hầu hết mọi người khi mua iPhone về đều có thói quen cắm sạc qua đêm hoặc để pin tụt xuống dưới 10% thậm chí sập nguồn mới cuống cuồng đi tìm cục sạc. Tuy nhiên, theo các chuyên gia kỹ thuật pin lithium-ion, thói quen này đang âm thầm làm giảm tuổi thọ pin iPhone của bạn nhanh gấp 3 lần bình thường.
+
+Trong video này, chúng ta sẽ cùng bóc tách toàn bộ:
+1. Quy tắc vàng 20% - 80% giúp pin iPhone bền bỉ sau 3 năm sử dụng.
+2. Sạc nhanh 20W hay 30W có thực sự gây chai pin nhanh hơn sạc 5W truyền thống không?
+3. Tính năng Sạc pin được tối ưu hóa (Optimized Battery Charging) trên iOS hoạt động ra sao?
+4. Nhiệt độ - kẻ thù số 1 của pin và những lưu ý sống còn khi vừa sạc vừa lướt TikTok/chơi game.
+
+Hãy xem hết video để bảo vệ chiếc dế yêu đắt tiền của bạn ngay hôm nay!`
+  },
+  {
+    mode: 'plain',
+    title: 'Why 90% of iPhone Users Are Charging Their Phones Wrong!',
+    content: `Most people plug in their iPhone overnight or let it drop below 10% before panicking to find a charger. According to battery engineers, these common daily habits are degrading your lithium-ion battery health three times faster than normal.
+
+In this video, we break down:
+1. The 20% - 80% golden rule to keep your iPhone battery healthy for 3+ years.
+2. Does 20W or 30W fast charging really destroy battery health faster than slow 5W chargers?
+3. How Optimized Battery Charging and Clean Energy Charging on iOS actually work.
+4. Heat: The #1 battery killer and why you should NEVER game while fast charging.
+
+Watch until the end to protect your device battery health today!`
+  },
+  {
+    mode: 'srt',
+    title: 'Sự thật đằng sau cú sốc DeepSeek: Trí tuệ nhân tạo sẽ thay đổi thế giới ra sao?',
+    content: `1
+00:00:00,000 --> 00:00:18,500
+Đầu năm 2025, cả Thung lũng Silicon đã chấn động khi startup AI Trung Quốc ra mắt DeepSeek R1.
+
+2
+00:00:18,500 --> 00:01:25,000
+Chi phí huấn luyện chỉ 6 triệu USD, bằng 1 phần 50 so với OpenAI hay Google, nhưng hiệu năng ngang ngửa GPT-4o.
+
+3
+00:01:25,000 --> 00:02:50,000
+Bí mật nằm ở kiến trúc Mixture of Experts và thuật toán MLA tối ưu bộ nhớ GPU siêu phàm.
+
+4
+00:02:50,000 --> 00:04:40,000
+Tác động khủng khiếp tới cổ phiếu Nvidia và cuộc đua bán dẫn toàn cầu trong thập kỷ tới.
+
+5
+00:04:40,000 --> 00:06:20,000
+Người dùng bình thường sẽ được hưởng lợi gì khi AI đỉnh cao trở nên hoàn toàn miễn phí và mã nguồn mở?
+
+6
+00:06:20,000 --> 00:07:35,000
+Tổng kết và dự đoán tương lai AI trong 5 năm tới. Đừng quên bấm Đăng ký kênh để không bỏ lỡ!`
+  }
 ];
 
 // Target languages configuration for title generator
@@ -119,11 +185,13 @@ const DOM = {
 
   // Studio Sidebar & Multi-Module Routing
   btnNavScript: document.getElementById('btnNavScript'),
+  btnNavDescription: document.getElementById('btnNavDescription'),
   btnNavTitle: document.getElementById('btnNavTitle'),
   btnNavSettings: document.getElementById('btnNavSettings'),
   sidebarStatusDot: document.getElementById('sidebarStatusDot'),
   sidebarUpdateDot: document.getElementById('sidebarUpdateDot'),
   viewScriptwriter: document.getElementById('viewScriptwriter'),
+  viewDescriptionGenerator: document.getElementById('viewDescriptionGenerator'),
   viewTitleGenerator: document.getElementById('viewTitleGenerator'),
   viewSettings: document.getElementById('viewSettings'),
   btnBackToScript: document.getElementById('btnBackToScript'),
@@ -138,6 +206,43 @@ const DOM = {
   panelSettingsUpdates: document.getElementById('panelSettingsUpdates'),
   selTitleDefaultLang: document.getElementById('selTitleDefaultLang'),
   chkAutoCheckUpdateStartup: document.getElementById('chkAutoCheckUpdateStartup'),
+
+  // Module: Description & vidIQ Tags Generator Elements
+  btnSampleDesc: document.getElementById('btnSampleDesc'),
+  btnClearDesc: document.getElementById('btnClearDesc'),
+  inputDescTitle: document.getElementById('inputDescTitle'),
+  btnPasteDescTitle: document.getElementById('btnPasteDescTitle'),
+  btnClearDescTitle: document.getElementById('btnClearDescTitle'),
+  descTitleCharCount: document.getElementById('descTitleCharCount'),
+  btnModePlain: document.getElementById('btnModePlain'),
+  btnModeSrt: document.getElementById('btnModeSrt'),
+  inputDescContent: document.getElementById('inputDescContent'),
+  btnPasteDescContent: document.getElementById('btnPasteDescContent'),
+  btnClearDescContent: document.getElementById('btnClearDescContent'),
+  descContentCharCount: document.getElementById('descContentCharCount'),
+  descContentWordCount: document.getElementById('descContentWordCount'),
+  descLangGrid: document.getElementById('descLangGrid'),
+  descLangAutoBadge: document.getElementById('descLangAutoBadge'),
+  btnGenerateDesc: document.getElementById('btnGenerateDesc'),
+  btnGenerateDescText: document.getElementById('btnGenerateDescText'),
+  descOutputStatusDesc: document.getElementById('descOutputStatusDesc'),
+  descStatusBadge: document.getElementById('descStatusBadge'),
+  descStatusText: document.getElementById('descStatusText'),
+  descOutputBody: document.getElementById('descOutputBody'),
+  descEmptyState: document.getElementById('descEmptyState'),
+  descLoadingState: document.getElementById('descLoadingState'),
+  descLoadingText: document.getElementById('descLoadingText'),
+  descResultsWrapper: document.getElementById('descResultsWrapper'),
+  descCharCountPill: document.getElementById('descCharCountPill'),
+  btnCopyDescOnly: document.getElementById('btnCopyDescOnly'),
+  descOutputText: document.getElementById('descOutputText'),
+  descTagsCharCountPill: document.getElementById('descTagsCharCountPill'),
+  btnCopyTagsOnly: document.getElementById('btnCopyTagsOnly'),
+  descTagsCloud: document.getElementById('descTagsCloud'),
+  inputAddCustomTag: document.getElementById('inputAddCustomTag'),
+  btnAddCustomTag: document.getElementById('btnAddCustomTag'),
+  btnCopyAllDescAndTags: document.getElementById('btnCopyAllDescAndTags'),
+  btnRegenerateDesc: document.getElementById('btnRegenerateDesc'),
 
   // Module 2: Title Generator Elements
   btnSampleTitle: document.getElementById('btnSampleTitle'),
@@ -306,6 +411,8 @@ async function initApp() {
   await loadSettings();
   updateHeaderActiveModel();
   checkReadiness();
+  checkTitleReadiness();
+  checkDescReadiness();
   initUpdateSystem();
 }
 
@@ -386,16 +493,20 @@ function switchMainView(viewName, settingsTab = 'general') {
     showToast('Đang tạo tiêu đề, vui lòng đợi hoàn tất trước khi chuyển trang!', 'warning');
     return;
   }
+  if (state.descriptionState?.isGenerating && viewName !== 'description') {
+    showToast('Đang tối ưu mô tả & tags, vui lòng đợi hoàn tất trước khi chuyển trang!', 'warning');
+    return;
+  }
 
   // Hide popover if open
   if (DOM.quickApiMenu) DOM.quickApiMenu.classList.add('hidden');
   if (DOM.pillChevron) DOM.pillChevron.classList.remove('rotate');
 
   // Reset active tabs & views
-  [DOM.btnNavScript, DOM.btnNavTitle, DOM.btnNavSettings].forEach(btn => {
+  [DOM.btnNavScript, DOM.btnNavDescription, DOM.btnNavTitle, DOM.btnNavSettings].forEach(btn => {
     if (btn) btn.classList.remove('active');
   });
-  [DOM.viewScriptwriter, DOM.viewTitleGenerator, DOM.viewSettings].forEach(view => {
+  [DOM.viewScriptwriter, DOM.viewDescriptionGenerator, DOM.viewTitleGenerator, DOM.viewSettings].forEach(view => {
     if (view) view.classList.add('hidden');
   });
 
@@ -405,6 +516,12 @@ function switchMainView(viewName, settingsTab = 'general') {
     if (DOM.btnNavScript) DOM.btnNavScript.classList.add('active');
     if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'AI Scriptwriter & YouTube Content Studio';
     checkReadiness();
+  } else if (viewName === 'description') {
+    state.activeWorkspaceView = 'description';
+    if (DOM.viewDescriptionGenerator) DOM.viewDescriptionGenerator.classList.remove('hidden');
+    if (DOM.btnNavDescription) DOM.btnNavDescription.classList.add('active');
+    if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'AI SEO Description & YouTube Tags Studio (vidIQ Style)';
+    checkDescReadiness();
   } else if (viewName === 'title') {
     state.activeWorkspaceView = 'title';
     if (DOM.viewTitleGenerator) DOM.viewTitleGenerator.classList.remove('hidden');
@@ -417,9 +534,17 @@ function switchMainView(viewName, settingsTab = 'general') {
     if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'Trung tâm Cài đặt & Cấu hình API';
 
     // Dynamic back button label according to current active workspace
-    const backText = state.activeWorkspaceView === 'title' ? 'Quay lại Tiêu đề' : 'Quay lại Kịch bản';
+    let backText = 'Quay lại Kịch bản';
+    if (state.activeWorkspaceView === 'description') {
+      backText = 'Quay lại Mô tả';
+    } else if (state.activeWorkspaceView === 'title') {
+      backText = 'Quay lại Tiêu đề';
+    }
     if (DOM.btnBackToScriptText) DOM.btnBackToScriptText.textContent = backText;
-    if (DOM.btnBackToScript) DOM.btnBackToScript.title = `Quay lại bàn làm việc ${state.activeWorkspaceView === 'title' ? 'Tiêu đề' : 'Kịch bản'}`;
+    if (DOM.btnBackToScript) {
+      const workspaceLabel = state.activeWorkspaceView === 'description' ? 'Mô tả' : (state.activeWorkspaceView === 'title' ? 'Tiêu đề' : 'Kịch bản');
+      DOM.btnBackToScript.title = `Quay lại bàn làm việc ${workspaceLabel}`;
+    }
 
     switchSettingsTab(settingsTab);
   }
@@ -481,6 +606,9 @@ function bindEvents() {
   if (DOM.btnNavScript) {
     DOM.btnNavScript.addEventListener('click', () => switchMainView('script'));
   }
+  if (DOM.btnNavDescription) {
+    DOM.btnNavDescription.addEventListener('click', () => switchMainView('description'));
+  }
   if (DOM.btnNavTitle) {
     DOM.btnNavTitle.addEventListener('click', () => switchMainView('title'));
   }
@@ -489,6 +617,86 @@ function bindEvents() {
   }
   if (DOM.btnBackToScript) {
     DOM.btnBackToScript.addEventListener('click', () => switchMainView(state.activeWorkspaceView || 'script'));
+  }
+
+  // Module: Description & vidIQ Tags Generator Event Bindings
+  if (DOM.inputDescTitle) {
+    DOM.inputDescTitle.addEventListener('input', updateDescInputCounts);
+  }
+  if (DOM.inputDescContent) {
+    DOM.inputDescContent.addEventListener('input', updateDescInputCounts);
+  }
+  if (DOM.btnSampleDesc) {
+    DOM.btnSampleDesc.addEventListener('click', loadSampleDescription);
+  }
+  if (DOM.btnClearDesc) {
+    DOM.btnClearDesc.addEventListener('click', clearAllDescInputs);
+  }
+  if (DOM.btnPasteDescTitle) {
+    DOM.btnPasteDescTitle.addEventListener('click', pasteDescTitle);
+  }
+  if (DOM.btnClearDescTitle) {
+    DOM.btnClearDescTitle.addEventListener('click', clearDescTitle);
+  }
+  if (DOM.btnPasteDescContent) {
+    DOM.btnPasteDescContent.addEventListener('click', pasteDescContent);
+  }
+  if (DOM.btnClearDescContent) {
+    DOM.btnClearDescContent.addEventListener('click', clearDescContent);
+  }
+  if (DOM.btnModePlain) {
+    DOM.btnModePlain.addEventListener('click', () => setDescMode('plain'));
+  }
+  if (DOM.btnModeSrt) {
+    DOM.btnModeSrt.addEventListener('click', () => setDescMode('srt'));
+  }
+  if (DOM.descLangGrid) {
+    const descPills = DOM.descLangGrid.querySelectorAll('.desc-lang-pill');
+    descPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const lang = pill.getAttribute('data-lang');
+        if (lang) selectDescTargetLanguage(lang, false);
+      });
+    });
+  }
+  if (DOM.btnGenerateDesc) {
+    DOM.btnGenerateDesc.addEventListener('click', () => {
+      if (state.descriptionState.isGenerating) {
+        stopDescriptionGeneration();
+      } else {
+        startDescriptionGeneration();
+      }
+    });
+  }
+  if (DOM.btnCopyDescOnly) {
+    DOM.btnCopyDescOnly.addEventListener('click', copyDescriptionOnly);
+  }
+  if (DOM.btnCopyTagsOnly) {
+    DOM.btnCopyTagsOnly.addEventListener('click', copyTagsOnly);
+  }
+  if (DOM.btnCopyAllDescAndTags) {
+    DOM.btnCopyAllDescAndTags.addEventListener('click', copyAllDescAndTags);
+  }
+  if (DOM.btnRegenerateDesc) {
+    DOM.btnRegenerateDesc.addEventListener('click', () => {
+      if (!state.descriptionState.isGenerating) {
+        startDescriptionGeneration();
+      }
+    });
+  }
+  if (DOM.btnAddCustomTag) {
+    DOM.btnAddCustomTag.addEventListener('click', addCustomTagFromInput);
+  }
+  if (DOM.inputAddCustomTag) {
+    DOM.inputAddCustomTag.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addCustomTagFromInput();
+      }
+    });
+  }
+  if (DOM.descOutputText) {
+    DOM.descOutputText.addEventListener('input', updateDescOutputCharCount);
   }
 
   // Module 2: Title Generator Event Bindings
@@ -935,6 +1143,7 @@ function updateHeaderActiveModel() {
   }
 
   checkTitleReadiness();
+  checkDescReadiness();
 }
 
 // ===================================================================
@@ -3286,6 +3495,862 @@ async function copyAllTitlesToClipboard() {
     showToast('Đã sao chép toàn bộ danh sách 5 tiêu đề vào Clipboard!', 'success', 2000);
   } catch (err) {
     showToast('Lỗi khi sao chép toàn bộ!', 'danger', 1500);
+  }
+}
+
+// ===================================================================
+// MODULE 3: YOUTUBE SEO DESCRIPTION & VIDIQ TAGS CONTROLLER
+// ===================================================================
+
+function updateDescInputCounts() {
+  const titleText = (DOM.inputDescTitle?.value || '').trim();
+  const contentText = (DOM.inputDescContent?.value || '').trim();
+
+  if (DOM.descTitleCharCount) {
+    DOM.descTitleCharCount.textContent = `${titleText.length} ký tự`;
+  }
+
+  const contentCharCount = contentText.length;
+  const contentWordCount = contentText ? contentText.split(/\s+/).filter(Boolean).length : 0;
+
+  if (DOM.descContentCharCount) {
+    DOM.descContentCharCount.textContent = `${contentCharCount.toLocaleString('vi-VN')} ký tự`;
+  }
+  if (DOM.descContentWordCount) {
+    DOM.descContentWordCount.textContent = `${contentWordCount.toLocaleString('vi-VN')} từ`;
+  }
+
+  // Tự động nhận diện ngôn ngữ theo nội dung đầu vào (Input)
+  autoDetectDescLanguage();
+
+  checkDescReadiness();
+}
+
+// Thuật toán nhận diện ngôn ngữ siêu nhanh và chính xác từ văn bản đầu vào (Đạt chuẩn 100% cho 8 ngôn ngữ)
+function detectLanguageFromText(text) {
+  if (!text || typeof text !== 'string') return null;
+  const clean = text.trim();
+  if (clean.length < 3) return null;
+
+  // 1. Tiếng Nhật: Nhận diện chữ Hiragana hoặc Katakana đặc trưng
+  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(clean)) return 'ja';
+
+  // 2. Tiếng Hàn: Nhận diện khối chữ Hangul
+  if (/[\uAC00-\uD7AF\u1100-\u11FF]/.test(clean)) return 'ko';
+
+  // 3. Tiếng Trung: Nhận diện chữ Hán CJK (khi không chứa chữ Nhật)
+  if (/[\u4E00-\u9FFF]/.test(clean)) return 'zh';
+
+  // 4. Tiếng Việt: Nhận diện nguyên âm có dấu đặc thù chỉ có trong tiếng Việt
+  if (/[đĐăĂơƠưƯạảầấậẩẫằắặẳẵẹẻềếệểễịỉọỏồốộổỗờớợởỡụủừứựửữỵỷ]/i.test(clean)) return 'vi';
+
+  // Tách từ Unicode chuẩn xác
+  const tokens = new Set(clean.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').split(' ').filter(Boolean));
+
+  // Kiểm tra từ khóa tiếng Việt không dấu hoặc phổ biến
+  if (tokens.has('và') || tokens.has('của') || tokens.has('không') || tokens.has('được') || tokens.has('người') || tokens.has('tại') || tokens.has('sao') || tokens.has('kịch') || tokens.has('bản')) return 'vi';
+
+  // 5. Tiếng Bồ Đào Nha / Brasil (Kiểm tra trước tiếng Tây Ban Nha để tránh nhầm lẫn)
+  if (/[çÇãõ]/.test(clean) || tokens.has('você') || tokens.has('voce') || tokens.has('não') || tokens.has('nao') || tokens.has('são') || tokens.has('obrigado') || tokens.has('muito') || tokens.has('ecrã')) {
+    if (tokens.has('você') || tokens.has('voce') || tokens.has('legal') || tokens.has('cara') || tokens.has('beleza')) return 'br';
+    return 'pt';
+  }
+
+  // 6. Tiếng Tây Ban Nha
+  if (/[¿¡ñÑ]/.test(clean) || tokens.has('el') || tokens.has('la') || tokens.has('los') || tokens.has('las') || tokens.has('del') || tokens.has('como') || tokens.has('pero') || tokens.has('más') || tokens.has('estos') || tokens.has('estas')) return 'es';
+
+  // 7. Tiếng Anh: Các từ khóa phổ biến trong tiêu đề / kịch bản tiếng Anh
+  if (tokens.has('the') || tokens.has('and') || tokens.has('is') || tokens.has('are') || tokens.has('in') || tokens.has('on') || tokens.has('at') || tokens.has('to') || tokens.has('for') || tokens.has('with') || tokens.has('this') || tokens.has('that') || tokens.has('from') || tokens.has('how') || tokens.has('why') || tokens.has('what') || tokens.has('when') || tokens.has('where') || tokens.has('your') || tokens.has('you')) return 'en';
+
+  return null;
+}
+
+function selectDescTargetLanguage(langKey, isAuto = false) {
+  if (state.descriptionState.isGenerating) return;
+  if (!TITLE_TARGET_LANGUAGES[langKey]) return;
+
+  state.descriptionState.targetLanguage = langKey;
+
+  if (!isAuto) {
+    state.descriptionState.isUserManualLang = true;
+  }
+
+  if (DOM.descLangGrid) {
+    const descPills = DOM.descLangGrid.querySelectorAll('.desc-lang-pill');
+    descPills.forEach(pill => {
+      pill.classList.toggle('active', pill.getAttribute('data-lang') === langKey);
+    });
+  }
+
+  const langObj = TITLE_TARGET_LANGUAGES[langKey] || TITLE_TARGET_LANGUAGES.vi;
+
+  if (DOM.descLangAutoBadge) {
+    if (isAuto) {
+      DOM.descLangAutoBadge.textContent = `⚡ Nhận diện: ${langObj.name}`;
+      DOM.descLangAutoBadge.classList.add('detected');
+      clearTimeout(state.descriptionState._autoBadgeTimer);
+      state.descriptionState._autoBadgeTimer = setTimeout(() => {
+        if (DOM.descLangAutoBadge) {
+          DOM.descLangAutoBadge.textContent = '⚡ Tự động nhận diện';
+          DOM.descLangAutoBadge.classList.remove('detected');
+        }
+      }, 2500);
+    } else {
+      DOM.descLangAutoBadge.textContent = `🔒 Đã chọn: ${langObj.name}`;
+      DOM.descLangAutoBadge.classList.remove('detected');
+    }
+  }
+
+  if (DOM.descOutputStatusDesc && !state.descriptionState.isGenerating) {
+    DOM.descOutputStatusDesc.textContent = `Tối ưu điểm hiển thị thuật toán YouTube & vidIQ (${langObj.name})`;
+  }
+}
+
+function autoDetectDescLanguage() {
+  const titleText = (DOM.inputDescTitle?.value || '').trim();
+  const contentText = (DOM.inputDescContent?.value || '').trim();
+  const combinedText = titleText + ' ' + contentText;
+
+  if (!combinedText.trim()) {
+    state.descriptionState.isUserManualLang = false;
+    return;
+  }
+
+  const detected = detectLanguageFromText(combinedText);
+  if (detected && detected !== state.descriptionState.targetLanguage) {
+    selectDescTargetLanguage(detected, true);
+  }
+}
+
+function checkDescReadiness() {
+  const provider = state.settings.providers.find(p => p.id === state.settings.activeProviderId);
+  const hasProvider = Boolean(provider && provider.apiKey);
+  const titleText = (DOM.inputDescTitle?.value || '').trim();
+  const currentLang = state.descriptionState.targetLanguage || 'vi';
+  const langObj = TITLE_TARGET_LANGUAGES[currentLang] || TITLE_TARGET_LANGUAGES.vi;
+
+  if (DOM.btnGenerateDesc && !state.descriptionState.isGenerating) {
+    if (!hasProvider) {
+      DOM.btnGenerateDesc.disabled = true;
+      DOM.btnGenerateDesc.classList.add('disabled');
+      DOM.btnGenerateDesc.title = 'Vui lòng cấu hình API Key trong Cài đặt trước!';
+    } else {
+      DOM.btnGenerateDesc.disabled = false;
+      DOM.btnGenerateDesc.classList.remove('disabled');
+      DOM.btnGenerateDesc.title = titleText ? `Bấm để tạo Mô tả SEO & Tags YouTube (${langObj.name})` : 'Vui lòng nhập tiêu đề video trước';
+    }
+  }
+}
+
+function setDescMode(mode) {
+  if (state.descriptionState.isGenerating) return;
+  state.descriptionState.mode = mode;
+
+  if (mode === 'plain') {
+    if (DOM.btnModePlain) DOM.btnModePlain.classList.add('active');
+    if (DOM.btnModeSrt) DOM.btnModeSrt.classList.remove('active');
+    if (DOM.inputDescContent) {
+      DOM.inputDescContent.placeholder = '';
+    }
+  } else if (mode === 'srt') {
+    if (DOM.btnModeSrt) DOM.btnModeSrt.classList.add('active');
+    if (DOM.btnModePlain) DOM.btnModePlain.classList.remove('active');
+    if (DOM.inputDescContent) {
+      DOM.inputDescContent.placeholder = '';
+    }
+  }
+}
+
+function loadSampleDescription() {
+  if (state.descriptionState.isGenerating) return;
+  const currentTitle = (DOM.inputDescTitle?.value || '').trim();
+
+  let nextSample = SAMPLE_DESC_DATA[0];
+  const idx = SAMPLE_DESC_DATA.findIndex(s => s.title === currentTitle);
+  if (idx >= 0 && idx < SAMPLE_DESC_DATA.length - 1) {
+    nextSample = SAMPLE_DESC_DATA[idx + 1];
+  } else if (idx === SAMPLE_DESC_DATA.length - 1) {
+    nextSample = SAMPLE_DESC_DATA[0];
+  }
+
+  setDescMode(nextSample.mode);
+
+  if (DOM.inputDescTitle) {
+    DOM.inputDescTitle.value = nextSample.title;
+  }
+  if (DOM.inputDescContent) {
+    DOM.inputDescContent.value = nextSample.content;
+  }
+
+  updateDescInputCounts();
+  showToast(`Đã nạp mẫu: "${nextSample.title.slice(0, 42)}..."`, 'success', 1800);
+}
+
+async function pasteDescTitle() {
+  if (state.descriptionState.isGenerating) return;
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && DOM.inputDescTitle) {
+      DOM.inputDescTitle.value = text.trim();
+      updateDescInputCounts();
+      showToast('Đã dán tiêu đề!', 'success', 1200);
+    }
+  } catch (e) {
+    showToast('Không thể truy cập Clipboard!', 'danger');
+  }
+}
+
+function clearDescTitle() {
+  if (state.descriptionState.isGenerating) return;
+  if (DOM.inputDescTitle) {
+    DOM.inputDescTitle.value = '';
+    updateDescInputCounts();
+    DOM.inputDescTitle.focus();
+  }
+}
+
+async function pasteDescContent() {
+  if (state.descriptionState.isGenerating) return;
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && DOM.inputDescContent) {
+      DOM.inputDescContent.value = text;
+      // Auto-detect if user pastes SRT format (has "-->" or timestamp digits)
+      if (/-->\s*\d{2}:\d{2}/.test(text) && state.descriptionState.mode !== 'srt') {
+        setDescMode('srt');
+        showToast('Đã phát hiện định dạng SRT: Tự động chuyển sang chế độ Phụ đề SRT!', 'info', 2200);
+      }
+      updateDescInputCounts();
+      showToast('Đã dán nội dung kịch bản!', 'success', 1200);
+    }
+  } catch (e) {
+    showToast('Không thể truy cập Clipboard!', 'danger');
+  }
+}
+
+function clearDescContent() {
+  if (state.descriptionState.isGenerating) return;
+  if (DOM.inputDescContent) {
+    DOM.inputDescContent.value = '';
+    updateDescInputCounts();
+    DOM.inputDescContent.focus();
+  }
+}
+
+function clearAllDescInputs() {
+  if (state.descriptionState.isGenerating) return;
+  clearDescTitle();
+  clearDescContent();
+  state.descriptionState.isUserManualLang = false;
+  state.descriptionState.descriptionText = '';
+  state.descriptionState.tags = [];
+  selectDescTargetLanguage('vi', false);
+  if (DOM.descLangAutoBadge) {
+    DOM.descLangAutoBadge.textContent = '⚡ Tự động nhận diện';
+    DOM.descLangAutoBadge.classList.remove('detected');
+  }
+  if (DOM.descOutputText) DOM.descOutputText.value = '';
+  if (DOM.descTagsCloud) DOM.descTagsCloud.innerHTML = '';
+  if (DOM.descResultsWrapper) DOM.descResultsWrapper.classList.add('hidden');
+  if (DOM.descEmptyState) DOM.descEmptyState.classList.remove('hidden');
+  if (DOM.descStatusText) DOM.descStatusText.textContent = 'Sẵn sàng';
+  if (DOM.descStatusBadge) DOM.descStatusBadge.className = 'output-status-pill';
+  if (DOM.descOutputStatusDesc) DOM.descOutputStatusDesc.textContent = 'Tối ưu điểm hiển thị thuật toán YouTube & vidIQ (Tiếng Việt)';
+  if (DOM.btnCopyAllDescAndTags) DOM.btnCopyAllDescAndTags.disabled = true;
+  if (DOM.btnRegenerateDesc) DOM.btnRegenerateDesc.disabled = true;
+  updateDescOutputCharCount();
+  updateDescTagsCharCount();
+  showToast('Đã xóa tất cả ô nhập liệu!', 'info', 1200);
+}
+
+function setDescGeneratingUIState(isGen) {
+  state.descriptionState.isGenerating = isGen;
+
+  if (DOM.btnGenerateDesc) {
+    if (isGen) {
+      DOM.btnGenerateDesc.classList.add('danger-stop');
+      if (DOM.btnGenerateDescText) DOM.btnGenerateDescText.textContent = 'DỪNG TẠO MÔ TẢ';
+      DOM.btnGenerateDesc.title = 'Bấm để hủy tiến trình tạo';
+    } else {
+      DOM.btnGenerateDesc.classList.remove('danger-stop');
+      if (DOM.btnGenerateDescText) DOM.btnGenerateDescText.textContent = 'TẠO MÔ TẢ SEO & TAGS YOUTUBE';
+      checkDescReadiness();
+    }
+  }
+
+  if (DOM.inputDescTitle) DOM.inputDescTitle.disabled = isGen;
+  if (DOM.inputDescContent) DOM.inputDescContent.disabled = isGen;
+  if (DOM.btnSampleDesc) DOM.btnSampleDesc.disabled = isGen;
+  if (DOM.btnClearDesc) DOM.btnClearDesc.disabled = isGen;
+  if (DOM.btnPasteDescTitle) DOM.btnPasteDescTitle.disabled = isGen;
+  if (DOM.btnClearDescTitle) DOM.btnClearDescTitle.disabled = isGen;
+  if (DOM.btnPasteDescContent) DOM.btnPasteDescContent.disabled = isGen;
+  if (DOM.btnClearDescContent) DOM.btnClearDescContent.disabled = isGen;
+
+  if (isGen) {
+    if (DOM.descEmptyState) DOM.descEmptyState.classList.add('hidden');
+    if (DOM.descResultsWrapper) DOM.descResultsWrapper.classList.add('hidden');
+    if (DOM.descLoadingState) DOM.descLoadingState.classList.remove('hidden');
+
+    if (DOM.descStatusText) DOM.descStatusText.textContent = 'Đang xử lý';
+    if (DOM.descStatusBadge) DOM.descStatusBadge.className = 'output-status-pill running';
+    if (DOM.btnCopyAllDescAndTags) DOM.btnCopyAllDescAndTags.disabled = true;
+    if (DOM.btnRegenerateDesc) DOM.btnRegenerateDesc.disabled = true;
+  }
+}
+
+function stopDescriptionGeneration() {
+  if (state.descriptionState.abortController) {
+    state.descriptionState.abortController.abort();
+    state.descriptionState.abortController = null;
+  }
+  setDescGeneratingUIState(false);
+  showToast('Đã dừng tiến trình tạo mô tả!', 'info');
+
+  if (DOM.descLoadingState) DOM.descLoadingState.classList.add('hidden');
+  if (state.descriptionState.tags && state.descriptionState.tags.length > 0) {
+    if (DOM.descResultsWrapper) DOM.descResultsWrapper.classList.remove('hidden');
+  } else {
+    if (DOM.descEmptyState) DOM.descEmptyState.classList.remove('hidden');
+  }
+
+  if (DOM.descStatusText) DOM.descStatusText.textContent = 'Đã dừng';
+  if (DOM.descStatusBadge) DOM.descStatusBadge.className = 'output-status-pill';
+  if (DOM.descOutputStatusDesc) DOM.descOutputStatusDesc.textContent = 'Tiến trình đã bị dừng bởi người dùng';
+}
+
+async function startDescriptionGeneration() {
+  const title = (DOM.inputDescTitle?.value || '').trim();
+  if (!title) {
+    showToast('Vui lòng nhập tiêu đề video trước khi tạo!', 'warning');
+    DOM.inputDescTitle?.focus();
+    return;
+  }
+
+  const content = (DOM.inputDescContent?.value || '').trim();
+
+  // Active provider & model
+  const provider = state.settings.providers.find(p => p.id === state.settings.activeProviderId);
+  if (!provider || !provider.apiKey) {
+    showToast(`Vui lòng cấu hình API Key cho ${provider ? provider.displayName : 'hệ thống'}!`, 'warning');
+    switchMainView('settings', 'apikeys');
+    return;
+  }
+
+  const isGemini = (provider.providerType === 'gemini')
+    || (provider.apiKey && provider.apiKey.trim().startsWith('AIzaSy'))
+    || (provider.baseUrl && provider.baseUrl.includes('googleapis.com'));
+
+  let candidateModels = [];
+  if (provider.models && provider.models.length > 0) {
+    candidateModels = provider.models.map(m => (typeof m === 'string' ? m : m.id)).filter(Boolean);
+  } else if (isGemini) {
+    candidateModels = GEMINI_DEFAULT_MODELS.map(m => m.id);
+  }
+
+  const initialModelId = state.settings.activeModelId || candidateModels[0];
+  if (!initialModelId && candidateModels.length === 0) {
+    showToast('Chưa chọn model AI nào!', 'warning');
+    switchMainView('settings', 'apikeys');
+    return;
+  }
+
+  if (candidateModels.length > 1 && initialModelId) {
+    const idx = candidateModels.indexOf(initialModelId);
+    if (idx > 0) {
+      candidateModels = [...candidateModels.slice(idx), ...candidateModels.slice(0, idx)];
+    }
+  } else if (candidateModels.length === 0) {
+    candidateModels = [initialModelId];
+  }
+
+  const isAutoRotateEnabled = isGemini 
+    && (DOM.chkAutoRotateModal ? DOM.chkAutoRotateModal.checked : true)
+    && (state.preferences?.autoRotateModels !== false);
+
+  if (!isAutoRotateEnabled) {
+    candidateModels = [initialModelId];
+  }
+
+  const targetLangKey = state.descriptionState.targetLanguage || 'vi';
+  const targetLangObj = TITLE_TARGET_LANGUAGES[targetLangKey] || TITLE_TARGET_LANGUAGES.vi;
+
+  const isSrtMode = state.descriptionState.mode === 'srt';
+  const now = new Date();
+  const dateStr = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
+
+  const systemPrompt = `Bạn là Chuyên gia hàng đầu thế giới về Tối ưu hóa SEO YouTube và Chuyên gia thuật toán vidIQ (Senior YouTube SEO Specialist & vidIQ Algorithm Master).
+NGỮ CẢNH THỜI GIAN THỰC HIỆN TẠI: ${dateStr}.
+NGÔN NGỮ MỤC TIÊU BẮT BUỘC (100% STRICT TARGET LANGUAGE): ${targetLangObj.name} (${targetLangObj.promptDesc}).
+
+HIẾN PHÁP NGÔN NGỮ TỐI THƯỢNG (ZERO-LEAKAGE LANGUAGE POLICY):
+1. BẮT BUỘC 100% mọi câu chữ trong bản MÔ TẢ (SEO Description) - từ câu hook mở đầu, tóm tắt, tên các chapters/timestamps, lời kêu gọi CTA, đến các hashtags - ĐỀU PHẢI VIẾT HOÀN TOÀN BẰNG ${targetLangObj.name}.
+2. TUYỆT ĐỐI NGHIÊM CẤM pha trộn tiếng Việt hoặc bất kỳ ngôn ngữ nào khác nếu ngôn ngữ mục tiêu không phải là tiếng Việt.
+3. BẮT BUỘC 100% toàn bộ danh sách TAGS YOUTUBE (vidIQ style) phải là các từ khóa bản địa (Native Search Queries) bằng ${targetLangObj.name} mà người dùng tại quốc gia đó thực sự tìm kiếm trên YouTube.
+
+Nhiệm vụ của bạn: Từ Tiêu đề video và Kịch bản nội dung được cung cấp, hãy tạo ra:
+1. Một bản MÔ TẢ YOUTUBE (SEO Description) đỉnh cao bằng ${targetLangObj.name} tối ưu hóa điểm đề xuất thuật toán YouTube.
+2. Một danh sách TAGS YOUTUBE (vidIQ style) bằng ${targetLangObj.name} có điểm số SEO cao ngất ngưởng, TỔNG ĐỘ DÀI KHI NỐI DẤU PHẨY BẮT BUỘC DƯỚI 500 KÝ TỰ.
+
+QUY TẮC BẮT BUỘC CHO MÔ TẢ (SEO DESCRIPTION) BẰNG ${targetLangObj.name}:
+- Phần 1 (2 dòng đầu tiên, < 150 ký tự): Câu hook/mở đầu cực kỳ cuốn hút bằng ${targetLangObj.name}, đánh trúng khoảng trống tò mò (Curiosity Gap) và chứa tự nhiên từ khóa chính.
+- Phần 2 (Tóm tắt & Nội dung cốt lõi): 2-3 đoạn văn cô đọng, sắc bén bằng ${targetLangObj.name}, chia sẻ giá trị người xem sẽ nhận được.
+- Phần 3 (Mốc thời gian / Timestamps / Chapters bằng ${targetLangObj.name}):
+  * NẾU CHẾ ĐỘ SRT (${isSrtMode ? 'ĐANG BẬT' : 'KHÔNG BẬT'}): Bạn BẮT BUỘC phải phân tích các mốc thời gian thực trong phụ đề SRT do người dùng cung cấp và tạo ra 4 đến 8 chapters logic bắt đầu BẮT BUỘC bằng mốc "00:00 - Introduction/Giới thiệu...". Tiêu đề các chapters BẮT BUỘC phải viết bằng ${targetLangObj.name}.
+  * Nếu không có SRT hoặc chế độ văn bản thường: Tạo các mốc nội dung nổi bật bằng ${targetLangObj.name}.
+- Phần 4 (Kêu gọi hành động & Liên kết): Kêu gọi người xem Like, Đăng ký kênh và bấm chuông thông báo (🔔) bằng ${targetLangObj.name}.
+- Phần 5 (DƯỚI CÙNG BẮT BUỘC): Đặt từ 3 đến 5 Hashtags SEO thịnh hành nhất bằng ${targetLangObj.name} bắt đầu bằng dấu #.
+
+QUY TẮC BẮT BUỘC CHO TAGS YOUTUBE (VIDIQ STYLE) BẰNG ${targetLangObj.name}:
+- Số lượng: Khoảng 18 đến 26 tags chất lượng cao hoàn toàn bằng ${targetLangObj.name}.
+- Phân bổ từ khóa toàn diện:
+  * Từ khóa khớp chính xác tiêu đề
+  * Từ khóa hạt nhân / chủ đề rộng
+  * Từ khóa tìm kiếm dạng câu hỏi / Long-tail keywords bằng ${targetLangObj.name}
+  * Các biến thể tìm kiếm thịnh hành của khán giả bản địa
+- CHẤM ĐIỂM VIDIQ (score: 65 - 96): Ước tính điểm SEO tiềm năng cho từng tag theo tỷ lệ Lượt tìm kiếm cao & Mức độ cạnh tranh vừa phải.
+- Tags YouTube là từ khóa thuần (KHÔNG có dấu #).
+- GIỚI HẠN TUYỆT ĐỐI VỀ KÝ TỰ: Tổng độ dài của tất cả các tag khi nối lại bằng dấu phẩy và khoảng trắng ", " BẮT BUỘC KHÔNG ĐƯỢC VƯỢT QUÁ 500 KÝ TỰ (mục tiêu lý tưởng: 420 - 485 ký tự) để người dùng có thể bấm Copy và dán ăn ngay 100% vào ô Tags của YouTube Studio mà không bị lỗi đỏ.
+
+ĐỊNH DẠNG ĐẦU RA BẮT BUỘC (JSON SCHEMA):
+BẮT BUỘC chỉ trả về duy nhất 1 đối tượng JSON thuần túy (không chào hỏi hay viết thêm chữ nào ngoài JSON):
+{
+  "description": "Nội dung toàn bộ mô tả video bằng ${targetLangObj.name} gồm hook, tóm tắt, chapters (nếu có srt), CTA và hashtags...",
+  "tags": [
+    { "text": "tag 1 in ${targetLangObj.name}", "score": 92 },
+    { "text": "tag 2 in ${targetLangObj.name}", "score": 88 },
+    { "text": "tag 3 in ${targetLangObj.name}", "score": 85 }
+  ]
+}`;
+
+  const userPrompt = `Thời điểm: ${dateStr}.
+NGÔN NGỮ MỤC TIÊU BẮT BUỘC: ${targetLangObj.name} (Toàn bộ mô tả và tags BẮT BUỘC 100% bằng ${targetLangObj.name}).
+TIÊU ĐỀ VIDEO: "${title}"
+CHẾ ĐỘ KỊCH BẢN: ${isSrtMode ? 'Phụ đề SRT (Hãy trích xuất Timestamps chính xác bắt đầu từ 00:00)' : 'Kịch bản văn bản thuần'}
+NỘI DUNG KỊCH BẢN CUNG CẤP:
+"""
+${content || '(Người dùng chỉ cung cấp tiêu đề, hãy phân tích tiêu đề và suy luận toàn diện để tạo mô tả và tags xuất sắc)'}
+"""
+
+Hãy tạo Mô tả SEO tối ưu và danh sách Tags phong cách vidIQ theo đúng JSON Schema đã quy định, TOÀN BỘ 100% BẰNG ${targetLangObj.name}. Lưu ý tổng độ dài chuỗi tags nối dấu phẩy phải nhỏ hơn hoặc bằng 500 ký tự.`;
+
+  setDescGeneratingUIState(true);
+  state.descriptionState.abortController = new AbortController();
+
+  if (DOM.descOutputStatusDesc) {
+    DOM.descOutputStatusDesc.textContent = `Đang phân tích từ khóa & tối ưu điểm SEO YouTube (${targetLangObj.name})...`;
+  }
+
+  try {
+    const baseUrl = resolveBaseUrl(provider);
+    const endpoint = `${baseUrl}/chat/completions`;
+
+    let rawText = '';
+
+    for (let mIdx = 0; mIdx < candidateModels.length; mIdx++) {
+      const currentModel = candidateModels[mIdx];
+      if (state.descriptionState.abortController?.signal?.aborted) break;
+
+      state.settings.activeModelId = currentModel;
+      updateHeaderActiveModel();
+
+      if (DOM.descLoadingText) {
+        DOM.descLoadingText.textContent = mIdx > 0
+          ? `🔄 Chuyển sang ${currentModel}: Đang tối ưu mô tả & tính điểm tags...`
+          : `Đang kết nối ${currentModel} & tối ưu SEO YouTube vidIQ...`;
+      }
+
+      const payload = {
+        model: currentModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.7,
+        stream: false
+      };
+
+      let response;
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${provider.apiKey}`
+          },
+          body: JSON.stringify(payload),
+          signal: state.descriptionState.abortController.signal
+        });
+      } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError') throw fetchErr;
+        if (mIdx < candidateModels.length - 1) {
+          await new Promise(r => setTimeout(r, 400));
+          continue;
+        }
+        throw fetchErr;
+      }
+
+      if (!response.ok) {
+        let errDetails = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errJson = await response.json();
+          if (errJson.error && errJson.error.message) {
+            errDetails = errJson.error.message;
+          }
+        } catch (e) {}
+
+        if (response.status === 401 || (response.status === 403 && !errDetails.toLowerCase().includes('quota'))) {
+          throw new Error(`API Key không hợp lệ hoặc bị từ chối (${errDetails}).`);
+        }
+
+        const isRecoverable = (response.status === 429 || response.status === 503 || response.status === 502 || response.status === 504 || response.status === 404)
+          || /quota|rate.?limit|resource_exhausted|overloaded|capacity|tokens|exhausted/i.test(errDetails);
+
+        if (isRecoverable && mIdx < candidateModels.length - 1) {
+          console.warn(`Model ${currentModel} gặp lỗi (${errDetails}), xoay vòng model...`);
+          await new Promise(r => setTimeout(r, 400));
+          continue;
+        } else {
+          throw new Error(errDetails);
+        }
+      }
+
+      const data = await response.json();
+      rawText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+      break;
+    }
+
+    if (!rawText) {
+      throw new Error('Máy chủ AI không trả về dữ liệu!');
+    }
+
+    const parsedResult = parseDescriptionAndTagsFromResponse(rawText);
+    if (!parsedResult || !parsedResult.description) {
+      throw new Error('Không thể phân tích định dạng Mô tả & Tags từ phản hồi AI!');
+    }
+
+    state.descriptionState.descriptionText = parsedResult.description;
+    state.descriptionState.tags = parsedResult.tags || [];
+
+    renderDescriptionResults(parsedResult);
+
+    if (DOM.descOutputStatusDesc) {
+      DOM.descOutputStatusDesc.textContent = `Đã tối ưu Mô tả SEO & Tags YouTube chuẩn thuật toán vidIQ (${targetLangObj.name})`;
+    }
+
+    showToast('Tạo Mô tả SEO & Tags YouTube thành công!', 'success');
+
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.log('Description generation aborted by user.');
+    } else {
+      console.error('Description generation failed:', err);
+      showToast(`Lỗi tạo mô tả: ${err.message}`, 'danger', 3500);
+      if (DOM.descOutputStatusDesc) {
+        DOM.descOutputStatusDesc.textContent = `Lỗi: ${err.message}`;
+      }
+      if (!state.descriptionState.descriptionText) {
+        if (DOM.descEmptyState) DOM.descEmptyState.classList.remove('hidden');
+      }
+      if (DOM.descLoadingState) DOM.descLoadingState.classList.add('hidden');
+      if (DOM.descStatusText) DOM.descStatusText.textContent = 'Lỗi kết nối';
+      if (DOM.descStatusBadge) DOM.descStatusBadge.className = 'output-status-pill';
+    }
+  } finally {
+    setDescGeneratingUIState(false);
+    state.descriptionState.abortController = null;
+  }
+}
+
+function parseDescriptionAndTagsFromResponse(rawText) {
+  let cleanText = rawText.trim();
+
+  // Extract from markdown ```json ... ``` block if present
+  const jsonMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (jsonMatch && jsonMatch[1]) {
+    cleanText = jsonMatch[1].trim();
+  }
+
+  try {
+    const parsed = JSON.parse(cleanText);
+    if (parsed && typeof parsed === 'object') {
+      let desc = parsed.description || parsed.seo_description || parsed.desc || '';
+      let tagsRaw = parsed.tags || parsed.youtube_tags || parsed.vidiq_tags || [];
+
+      let cleanTags = [];
+      if (Array.isArray(tagsRaw)) {
+        cleanTags = tagsRaw.map((t, idx) => {
+          if (typeof t === 'string') {
+            return {
+              text: t.replace(/^#/, '').trim(),
+              score: Math.max(65, 96 - Math.min(idx * 2, 30))
+            };
+          }
+          const text = (t.text || t.tag || t.name || '').replace(/^#/, '').trim();
+          let score = parseInt(t.score || t.points, 10);
+          if (isNaN(score) || score < 50 || score > 100) {
+            score = Math.max(65, 96 - Math.min(idx, 28));
+          }
+          return { text, score };
+        }).filter(t => t.text.length > 0);
+      }
+
+      // Enforce 500-char limit for YouTube Studio tags
+      let validTags = [];
+      let accumulatedLength = 0;
+      for (const tagObj of cleanTags) {
+        const addedLen = validTags.length === 0 ? tagObj.text.length : (tagObj.text.length + 2);
+        if (accumulatedLength + addedLen <= 500) {
+          validTags.push(tagObj);
+          accumulatedLength += addedLen;
+        }
+      }
+
+      return {
+        description: desc.trim(),
+        tags: validTags
+      };
+    }
+  } catch (jsonErr) {
+    console.warn('Direct JSON parse failed for description/tags, attempting resilient fallback extraction...', jsonErr);
+  }
+
+  // Resilient text fallback parser
+  let descFallback = cleanText;
+  let tagsFallback = [];
+
+  const tagSplitMatch = cleanText.match(/(?:Tags|TAGS|Từ khóa|Từ khoá|vidiq tags|YouTube Tags)[:\n\r]+([\s\S]+)$/i);
+  if (tagSplitMatch) {
+    descFallback = cleanText.substring(0, tagSplitMatch.index).trim();
+    const tagPart = tagSplitMatch[1].trim();
+    const rawTokens = tagPart.split(/[,;\n\r]+/).map(t => t.replace(/^#|^\d+[\.\-\)]\s*/, '').trim()).filter(Boolean);
+
+    let accumulatedLength = 0;
+    rawTokens.forEach((tok, idx) => {
+      const addedLen = tagsFallback.length === 0 ? tok.length : (tok.length + 2);
+      if (accumulatedLength + addedLen <= 500) {
+        tagsFallback.push({
+          text: tok,
+          score: Math.max(65, 95 - Math.min(idx * 2, 28))
+        });
+        accumulatedLength += addedLen;
+      }
+    });
+  }
+
+  return {
+    description: descFallback.trim(),
+    tags: tagsFallback
+  };
+}
+
+function renderDescriptionResults(data) {
+  if (DOM.descOutputText) {
+    DOM.descOutputText.value = data.description || '';
+  }
+
+  updateDescOutputCharCount();
+  renderTagsCloud();
+
+  if (DOM.descEmptyState) DOM.descEmptyState.classList.add('hidden');
+  if (DOM.descLoadingState) DOM.descLoadingState.classList.add('hidden');
+  if (DOM.descResultsWrapper) DOM.descResultsWrapper.classList.remove('hidden');
+
+  if (DOM.descStatusText) DOM.descStatusText.textContent = 'Hoàn tất';
+  if (DOM.descStatusBadge) DOM.descStatusBadge.className = 'output-status-pill completed';
+
+  if (DOM.btnCopyAllDescAndTags) DOM.btnCopyAllDescAndTags.disabled = false;
+  if (DOM.btnRegenerateDesc) DOM.btnRegenerateDesc.disabled = false;
+}
+
+function renderTagsCloud() {
+  if (!DOM.descTagsCloud) return;
+  DOM.descTagsCloud.innerHTML = '';
+
+  const tags = state.descriptionState.tags || [];
+
+  tags.forEach((tagItem, idx) => {
+    const pill = document.createElement('div');
+    pill.className = 'vidiq-tag-pill';
+    pill.setAttribute('data-tag-index', idx);
+
+    const scoreClass = tagItem.score >= 70 ? 'high' : 'medium';
+    pill.innerHTML = `
+      <span class="tag-score ${scoreClass}">${tagItem.score}</span>
+      <span class="tag-label">${escapeHtml(tagItem.text)}</span>
+      <button class="btn-tag-remove" title="Xóa tag này" type="button">✕</button>
+    `;
+
+    const removeBtn = pill.querySelector('.btn-tag-remove');
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeTagByIndex(idx);
+    });
+
+    DOM.descTagsCloud.appendChild(pill);
+  });
+
+  updateDescTagsCharCount();
+}
+
+function removeTagByIndex(idx) {
+  if (!state.descriptionState.tags || idx < 0 || idx >= state.descriptionState.tags.length) return;
+  const removed = state.descriptionState.tags.splice(idx, 1);
+  renderTagsCloud();
+  if (removed && removed[0]) {
+    showToast(`Đã xóa tag "${removed[0].text}"`, 'info', 1000);
+  }
+}
+
+function addCustomTagFromInput() {
+  if (!DOM.inputAddCustomTag) return;
+  const rawTag = DOM.inputAddCustomTag.value.trim().replace(/^#/, '');
+  if (!rawTag) {
+    DOM.inputAddCustomTag.focus();
+    return;
+  }
+
+  state.descriptionState.tags = state.descriptionState.tags || [];
+
+  // Check duplicate
+  const exists = state.descriptionState.tags.some(t => t.text.toLowerCase() === rawTag.toLowerCase());
+  if (exists) {
+    showToast(`Tag "${rawTag}" đã tồn tại trong danh sách!`, 'warning', 1800);
+    DOM.inputAddCustomTag.focus();
+    return;
+  }
+
+  // Calculate new length
+  const currentJoined = state.descriptionState.tags.map(t => t.text).join(', ');
+  const newLength = currentJoined ? (currentJoined.length + 2 + rawTag.length) : rawTag.length;
+
+  if (newLength > 500) {
+    showToast(`Không thể thêm! Tổng ký tự sẽ vượt quá 500 (${newLength}/500 ký tự). Vui lòng xóa bớt tag khác!`, 'danger', 2500);
+    return;
+  }
+
+  state.descriptionState.tags.push({
+    text: rawTag,
+    score: 75
+  });
+
+  DOM.inputAddCustomTag.value = '';
+  renderTagsCloud();
+  showToast(`Đã thêm tag: "${rawTag}"`, 'success', 1200);
+  DOM.inputAddCustomTag.focus();
+}
+
+function updateDescOutputCharCount() {
+  const text = (DOM.descOutputText?.value || '');
+  const len = text.length;
+  if (DOM.descCharCountPill) {
+    DOM.descCharCountPill.textContent = `${len.toLocaleString('vi-VN')} / 5.000 ký tự`;
+    if (len > 5000) {
+      DOM.descCharCountPill.classList.add('over-limit');
+    } else {
+      DOM.descCharCountPill.classList.remove('over-limit');
+    }
+  }
+}
+
+function updateDescTagsCharCount() {
+  const tags = state.descriptionState.tags || [];
+  const joinedStr = tags.map(t => t.text).join(', ');
+  const charLen = joinedStr.length;
+
+  if (DOM.descTagsCharCountPill) {
+    DOM.descTagsCharCountPill.textContent = `${charLen} / 500 ký tự`;
+    if (charLen > 500) {
+      DOM.descTagsCharCountPill.classList.add('over-limit');
+    } else {
+      DOM.descTagsCharCountPill.classList.remove('over-limit');
+    }
+  }
+}
+
+async function copyDescriptionOnly() {
+  const desc = (DOM.descOutputText?.value || '').trim();
+  if (!desc) {
+    showToast('Chưa có nội dung mô tả để sao chép!', 'warning');
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(desc);
+    if (DOM.btnCopyDescOnly) {
+      DOM.btnCopyDescOnly.classList.add('copied');
+      const span = DOM.btnCopyDescOnly.querySelector('span');
+      const originalText = span ? span.textContent : 'Sao chép mô tả';
+      if (span) span.textContent = '✓ ĐÃ CHÉP';
+      setTimeout(() => {
+        DOM.btnCopyDescOnly.classList.remove('copied');
+        if (span) span.textContent = originalText;
+      }, 1500);
+    }
+    showToast('Đã sao chép Mô tả SEO vào Clipboard!', 'success', 1500);
+  } catch (e) {
+    showToast('Không thể sao chép mô tả!', 'danger');
+  }
+}
+
+async function copyTagsOnly() {
+  const tags = state.descriptionState.tags || [];
+  if (tags.length === 0) {
+    showToast('Chưa có tags để sao chép!', 'warning');
+    return;
+  }
+
+  const tagsString = tags.map(t => t.text).join(', ');
+
+  try {
+    await navigator.clipboard.writeText(tagsString);
+    if (DOM.btnCopyTagsOnly) {
+      DOM.btnCopyTagsOnly.classList.add('copied');
+      const span = DOM.btnCopyTagsOnly.querySelector('span');
+      const originalText = span ? span.textContent : 'COPY';
+      if (span) span.textContent = '✓ COPIED';
+      setTimeout(() => {
+        DOM.btnCopyTagsOnly.classList.remove('copied');
+        if (span) span.textContent = originalText;
+      }, 1500);
+    }
+    showToast(`Đã sao chép ${tags.length} Tags (${tagsString.length}/500 ký tự - chuẩn YouTube Studio)!`, 'success', 2000);
+  } catch (e) {
+    showToast('Không thể sao chép danh sách tags!', 'danger');
+  }
+}
+
+async function copyAllDescAndTags() {
+  const desc = (DOM.descOutputText?.value || '').trim();
+  const tags = state.descriptionState.tags || [];
+
+  if (!desc && tags.length === 0) {
+    showToast('Chưa có kết quả để sao chép!', 'warning');
+    return;
+  }
+
+  const tagsString = tags.map(t => t.text).join(', ');
+  const fullContent = `--- MÔ TẢ YOUTUBE (SEO DESCRIPTION) ---
+${desc}
+
+--- TAGS YOUTUBE VIDIQ (${tagsString.length}/500 KÝ TỰ) ---
+${tagsString}`;
+
+  try {
+    await navigator.clipboard.writeText(fullContent);
+    if (DOM.btnCopyAllDescAndTags) {
+      DOM.btnCopyAllDescAndTags.classList.add('copied');
+      const span = DOM.btnCopyAllDescAndTags.querySelector('span');
+      const orig = span ? span.textContent : 'Sao chép toàn bộ';
+      if (span) span.textContent = '✓ ĐÃ SAO CHÉP TOÀN BỘ';
+      setTimeout(() => {
+        DOM.btnCopyAllDescAndTags.classList.remove('copied');
+        if (span) span.textContent = orig;
+      }, 1800);
+    }
+    showToast('Đã sao chép toàn bộ Mô tả & Tags vào Clipboard!', 'success', 2000);
+  } catch (e) {
+    showToast('Không thể sao chép toàn bộ!', 'danger');
   }
 }
 

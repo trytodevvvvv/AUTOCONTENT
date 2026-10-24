@@ -48,6 +48,16 @@
             </div>
             <span class="sidebar-label">Tiêu đề</span>
           </button>
+
+          <!-- Module 3: Mô tả (SEO Description & Tags) -->
+          <button class="sidebar-nav-btn" id="btnNavDescription" title="Tối ưu Mô tả SEO & Tags YouTube (vidIQ style)" type="button">
+            <div class="sidebar-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6h16M4 12h10M4 18h14"></path>
+              </svg>
+            </div>
+            <span class="sidebar-label">Mô tả</span>
+          </button>
         </div>
 
         <!-- Bottom Navigation Utilities -->
@@ -616,7 +626,288 @@
           </main>
         </div>
 
-        <!-- VIEW 3: TRUNG TÂM CÀI ĐẶT HỆ THỐNG (FULL VIEW) -->
+        <!-- VIEW 3: TỐI ƯU MÔ TẢ SEO & TAGS YOUTUBE -->
+        <div class="stage-view hidden" id="viewDescriptionGenerator">
+          <main class="app-workspace desc-workspace">
+            <!-- LEFT COLUMN: ĐẦU VÀO (TIÊU ĐỀ + CHỌN DẠNG KỊCH BẢN) -->
+            <section class="panel panel-input desc-panel-input">
+              <div class="panel-header">
+                <div class="panel-title-wrap">
+                  <span class="step-num">1</span>
+                  <div class="panel-title-text">
+                    <h2 class="panel-title">Tiêu đề & Kịch bản</h2>
+                    <p class="panel-desc" title="Nhập tiêu đề và dán kịch bản để AI tối ưu SEO toàn diện">Nhập tiêu đề và dán kịch bản để AI tối ưu SEO toàn diện</p>
+                  </div>
+                </div>
+                <div class="panel-actions">
+                  <button class="btn-text" id="btnSampleDesc" title="Điền dữ liệu mẫu hay để thử" type="button">Mẫu thử</button>
+                  <button class="btn-text danger" id="btnClearDesc" title="Xóa tất cả ô nhập" type="button">Xóa tất cả</button>
+                </div>
+              </div>
+
+              <!-- BODY SCROLLABLE / CONTENT AREA -->
+              <div class="desc-panel-body">
+                <!-- KHỐI 1: TIÊU ĐỀ VIDEO (BẮT BUỘC) -->
+                <div class="desc-card-box">
+                  <div class="desc-card-header">
+                    <div class="desc-card-title-group">
+                      <span class="desc-card-step">1</span>
+                      <label class="desc-card-title" for="inputDescTitle">Tiêu đề video (Bắt buộc)</label>
+                    </div>
+                    <div class="desc-card-actions">
+                      <button class="btn-mini-action" id="btnPasteDescTitle" title="Dán tiêu đề từ Clipboard" type="button">Dán</button>
+                      <button class="btn-mini-action danger" id="btnClearDescTitle" title="Xóa tiêu đề" type="button">Xóa</button>
+                    </div>
+                  </div>
+                  <textarea 
+                    id="inputDescTitle" 
+                    class="desc-title-input" 
+                    placeholder=""
+                    rows="2"
+                    spellcheck="false"
+                  ></textarea>
+                  <div class="desc-input-footer">
+                    <span class="desc-count-badge" id="descTitleCharCount">0 ký tự</span>
+                  </div>
+                </div>
+
+                <!-- KHỐI 2: CHỌN DẠNG KỊCH BẢN & NỘI DUNG (DÁN TRỰC TIẾP) -->
+                <div class="desc-card-box">
+                  <div class="desc-card-header">
+                    <div class="desc-card-title-group">
+                      <span class="desc-card-step">2</span>
+                      <label class="desc-card-title" for="inputDescContent">Nội dung kịch bản (Dán trực tiếp)</label>
+                    </div>
+                    <div class="desc-card-actions">
+                      <button class="btn-mini-action" id="btnPasteDescContent" title="Dán nội dung từ Clipboard" type="button">Dán</button>
+                      <button class="btn-mini-action danger" id="btnClearDescContent" title="Xóa nội dung kịch bản" type="button">Xóa</button>
+                    </div>
+                  </div>
+
+                  <!-- Segmented Toggle Mode Selector -->
+                  <div class="desc-mode-toggle">
+                    <button class="desc-toggle-btn active" id="btnModePlain" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                      <span>📝 Kịch bản văn bản</span>
+                    </button>
+                    <button class="desc-toggle-btn" id="btnModeSrt" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                      </svg>
+                      <span>⏱️ Phụ đề SRT (Mốc giờ)</span>
+                      <span class="badge-srt-pill">Chapters</span>
+                    </button>
+                  </div>
+
+                  <!-- Textarea Dán nội dung -->
+                  <div class="desc-textarea-wrapper">
+                    <textarea 
+                      id="inputDescContent" 
+                      class="desc-content-input" 
+                      placeholder=""
+                      rows="8"
+                      spellcheck="false"
+                    ></textarea>
+                  </div>
+                  <div class="desc-input-footer">
+                    <div class="desc-counts-group">
+                      <span id="descContentCharCount">0 ký tự</span>
+                      <span class="count-divider">•</span>
+                      <span id="descContentWordCount">0 từ</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- KHỐI 3: NGÔN NGỮ MỤC TIÊU (8 NGÔN NGỮ ĐỒNG BỘ INPUT / OUTPUT) -->
+                <div class="desc-card-box">
+                  <div class="desc-card-header">
+                    <div class="desc-card-title-group">
+                      <span class="desc-card-step">3</span>
+                      <label class="desc-card-title">Ngôn ngữ mục tiêu (Target Language)</label>
+                    </div>
+                    <span class="desc-lang-autodetect-badge" id="descLangAutoBadge" title="Tự động phát hiện theo ngôn ngữ đầu vào">⚡ Tự động nhận diện</span>
+                  </div>
+                  <div class="desc-lang-grid" id="descLangGrid">
+                    <button type="button" class="desc-lang-pill active" data-lang="vi" data-label="🇻🇳 Tiếng Việt">
+                      <span class="lang-tag">VN</span>
+                      <span class="lang-name">Tiếng Việt</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="en" data-label="🇺🇸 English">
+                      <span class="lang-tag">EN</span>
+                      <span class="lang-name">English</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="zh" data-label="🇨🇳 Tiếng Trung (中文)">
+                      <span class="lang-tag">CN</span>
+                      <span class="lang-name">中文 (Trung)</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="ja" data-label="🇯🇵 Tiếng Nhật (日本語)">
+                      <span class="lang-tag">JP</span>
+                      <span class="lang-name">日本語 (Nhật)</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="ko" data-label="🇰🇷 Tiếng Hàn (한국어)">
+                      <span class="lang-tag">KR</span>
+                      <span class="lang-name">한국어 (Hàn)</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="es" data-label="🇪🇸 Tây Ban Nha (Español)">
+                      <span class="lang-tag">ES</span>
+                      <span class="lang-name">Español</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="pt" data-label="🇵🇹 Bồ Đào Nha (Português EU)">
+                      <span class="lang-tag">PT</span>
+                      <span class="lang-name">Português</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="br" data-label="🇧🇷 Brazil (Português BR)">
+                      <span class="lang-tag">BR</span>
+                      <span class="lang-name">Brasil (BR)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CHÂN PANEL CỐ ĐỊNH SÁT ĐÁY BOX (PANEL FOOTER ACTION) -->
+              <div class="panel-footer-action desc-panel-footer">
+                <button class="btn-gradient-hero desc-generate-hero-btn" id="btnGenerateDesc" type="button">
+                  <span class="btn-hero-glow"></span>
+                  <span class="btn-hero-content">
+                    <svg class="btn-hero-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span id="btnGenerateDescText">TẠO MÔ TẢ SEO & TAGS YOUTUBE</span>
+                  </span>
+                </button>
+                <div class="desc-seo-tip">
+                  <span class="tip-bulb">💡</span>
+                  <span><strong>Mẹo SEO:</strong> Mô tả chuẩn 3 tầng (Hook - Chapters - CTA) & Tags ≤ 500 ký tự giúp video lên Top đề xuất.</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- RIGHT COLUMN: ĐẦU RA (MÔ TẢ SEO + TAGS VIDIQ STYLE) -->
+            <section class="panel panel-output desc-panel-output">
+              <div class="panel-header">
+                <div class="panel-title-wrap">
+                  <span class="step-num">2</span>
+                  <div class="panel-title-text">
+                    <h2 class="panel-title">Mô Tả & Tags YouTube SEO</h2>
+                    <p class="panel-desc" id="descOutputStatusDesc">Tối ưu điểm hiển thị thuật toán YouTube & vidIQ</p>
+                  </div>
+                </div>
+                <div class="output-status-pill" id="descStatusBadge">
+                  <span class="pulse-dot"></span>
+                  <span id="descStatusText">Sẵn sàng</span>
+                </div>
+              </div>
+
+              <!-- VÙNG KẾT QUẢ ĐẦU RA -->
+              <div class="desc-output-body" id="descOutputBody">
+                <!-- Empty State (Để trống hoàn toàn khi mới mở ứng dụng) -->
+                <div class="desc-empty-state hidden" id="descEmptyState"></div>
+
+                <!-- Loading State Skeleton -->
+                <div class="desc-loading-state hidden" id="descLoadingState">
+                  <div class="desc-loading-header">
+                    <div class="spinner-sm"></div>
+                    <span id="descLoadingText">Đang tối ưu Mô tả SEO & tính điểm Tags vidIQ...</span>
+                  </div>
+                  <div class="desc-skeleton-card" style="height: 180px;"></div>
+                  <div class="desc-skeleton-card" style="height: 140px;"></div>
+                </div>
+
+                <!-- Results Content Area (Hiển thị 2 khối chuyên biệt) -->
+                <div class="desc-results-wrapper hidden" id="descResultsWrapper">
+                  <!-- KHỐI 1: MÔ TẢ SEO YOUTUBE -->
+                  <div class="desc-result-section">
+                    <div class="desc-section-header">
+                      <div class="desc-section-title-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="desc-icon-red">
+                          <line x1="21" y1="10" x2="3" y2="10"></line>
+                          <line x1="21" y1="6" x2="3" y2="6"></line>
+                          <line x1="21" y1="14" x2="3" y2="14"></line>
+                          <line x1="21" y1="18" x2="3" y2="18"></line>
+                        </svg>
+                        <span class="desc-section-title">Mô Tả SEO</span>
+                        <span class="desc-char-pill" id="descCharCountPill">0 / 5.000 ký tự</span>
+                      </div>
+                      <button class="btn-copy-section" id="btnCopyDescOnly" title="Sao chép riêng phần Mô tả" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        <span>Sao chép mô tả</span>
+                      </button>
+                    </div>
+                    <div class="desc-text-box-wrap">
+                      <textarea id="descOutputText" class="desc-output-textarea" placeholder="Nội dung mô tả SEO..." spellcheck="false"></textarea>
+                    </div>
+                  </div>
+
+                  <!-- KHỐI 2: TAGS YOUTUBE (PHONG CÁCH VIDIQ) -->
+                  <div class="desc-result-section">
+                    <div class="desc-section-header">
+                      <div class="desc-section-title-wrap">
+                        <span class="tag-icon-emoji">🏷️</span>
+                        <span class="desc-section-title">Tags YouTube</span>
+                        <span class="desc-char-pill" id="descTagsCharCountPill">0 / 500 ký tự</span>
+                      </div>
+                      <div class="tags-header-actions">
+                        <button class="btn-copy-section" id="btnCopyTagsOnly" title="Sao chép toàn bộ tags (dạng phân cách bởi dấu phẩy)" type="button">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                          </svg>
+                          <span>COPY</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Cloud Container Tags vidIQ -->
+                    <div class="vidiq-tags-card">
+                      <div class="vidiq-tags-cloud" id="descTagsCloud">
+                        <!-- Rendered dynamically -->
+                      </div>
+
+                      <!-- Thanh thêm tag thủ công nhanh -->
+                      <div class="add-custom-tag-bar">
+                        <input type="text" id="inputAddCustomTag" class="input-custom-tag" placeholder="Nhập thêm tag của bạn và bấm Thêm...">
+                        <button class="btn-add-tag-submit" id="btnAddCustomTag" type="button">+ Thêm</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Output Action Footer Bar for Description -->
+              <div class="output-action-bar">
+                <div class="action-bar-left">
+                  <button class="btn-action primary" id="btnCopyAllDescAndTags" title="Sao chép toàn bộ Mô tả và danh sách Tags" type="button" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>Sao chép toàn bộ</span>
+                  </button>
+                </div>
+                <div class="action-bar-right">
+                  <button class="btn-action ghost" id="btnRegenerateDesc" title="Tạo lại phiên bản mới" type="button" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="23 4 23 10 17 10"></polyline>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    <span>Tạo lại</span>
+                  </button>
+                </div>
+              </div>
+            </section>
+          </main>
+        </div>
+
+        <!-- VIEW 4: TRUNG TÂM CÀI ĐẶT HỆ THỐNG (FULL VIEW) -->
         <div class="stage-view hidden" id="viewSettings">
           <div class="settings-view-container">
             <!-- Settings Header Bar -->
