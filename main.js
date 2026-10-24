@@ -105,8 +105,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1320,
     height: 880,
-    minWidth: 1080,
-    minHeight: 700,
+    minWidth: 920,
+    minHeight: 620,
     title: 'AutoContent Studio - AI Scriptwriter',
     backgroundColor: '#FAF5FF',
     icon: fs.existsSync(iconPath) ? iconPath : fallbackIcon,
@@ -128,10 +128,6 @@ function createWindow() {
   // Completely remove and hide the default File, Edit, View, Window menu
   Menu.setApplicationMenu(null);
   mainWindow.setMenuBarVisibility(false);
-
-  if (mainWindow.webContents && mainWindow.webContents.session) {
-    mainWindow.webContents.session.clearCache().catch(() => {});
-  }
 
   mainWindow.loadFile(path.join(APP_ROOT, 'renderer', 'index.html'));
 
@@ -265,7 +261,7 @@ registerIpcHandler('test-connection', async (event, provider) => {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
 
     let res;
     try {
@@ -305,11 +301,9 @@ registerIpcHandler('test-connection', async (event, provider) => {
     }
 
     if (res.ok) {
-      const data = await res.json();
-      const count = Array.isArray(data.data) ? data.data.length : (Array.isArray(data) ? data.length : 0);
       return {
         success: true,
-        message: `Xác thực thành công! Máy chủ phản hồi 200 OK (${count > 0 ? count + ' models khả dụng' : 'Sẵn sàng'}).`
+        message: 'Xác thực thành công! Máy chủ phản hồi 200 OK (Sẵn sàng).'
       };
     }
 

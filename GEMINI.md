@@ -127,5 +127,17 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
    * Ứng dụng tự động khởi động lại sau 1.2 giây và nạp ngay mã nguồn mới nhất.
    * Toàn bộ file cấu hình `saved_apis.json`, khóa API Key, model đang chọn và thiết lập cá nhân của người dùng được bảo toàn 100%, không bị ảnh hưởng.
 
+---
+
+## 📋 LUẬT 8: XÁC NHẬN PHƯƠNG ÁN TỐI ƯU TRƯỚC KHI VIẾT CODE (CONFIRMATION BEFORE CODE)
+
+1. **Nguyên tắc "Chưa cần phải code - Xác nhận trước" (Plan-First Gating)**:
+   * Trước bất kỳ yêu cầu chỉnh sửa, thêm tính năng hoặc tối ưu hóa nào từ người dùng, AI **tuyệt đối không được vội vàng sửa đổi code ngay lập tức**.
+   * Bắt buộc phải **phân tích nguyên nhân**, xây dựng **kế hoạch/phương án tối ưu chi tiết** và **trình bày rõ ràng để người dùng xác nhận**.
+2. **Điều kiện kích hoạt viết mã (Execution Trigger)**:
+   * AI **chỉ được phép bắt tay vào sửa file/viết code** sau khi người dùng đã xem phương án và phản hồi xác nhận rõ ràng (ví dụ: *"OK"*, *"Đồng ý"*, *"Thực hiện đi"*...).
+   * Mọi hành động tự ý code trước khi người dùng xác nhận đều bị coi là **vi phạm quy trình phát triển** của dự án.
+
+
 
 

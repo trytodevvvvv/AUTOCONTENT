@@ -11,7 +11,17 @@ const state = {
     providers: [],
     preferences: {}
   },
+  activeWorkspaceView: 'script',
   preferences: {
+    scriptwriter: {
+      lineSpacing: 'tight'
+    },
+    titleGenerator: {
+      defaultLanguage: 'last_used'
+    },
+    system: {
+      autoCheckUpdate: true
+    },
     lineSpacing: 'tight'
   },
   currentEditingProviderId: null,
@@ -23,7 +33,13 @@ const state = {
     chars: 0,
     estimatedSeconds: 0
   },
-  pendingUpdate: null
+  pendingUpdate: null,
+  titleState: {
+    targetLanguage: 'vi',
+    isGenerating: false,
+    titles: [],
+    abortController: null
+  }
 };
 
 // Sample text for instant demonstration
@@ -34,6 +50,28 @@ const SAMPLE_INPUT_TEXT = `Tại sao DeepSeek lại tạo nên cơn địa chấ
 Bí quyết nằm ở kiến trúc Mixture of Experts (MoE) cực kỳ tối ưu, thuật toán Multi-Head Latent Attention (MLA), và phương pháp học tăng cường không cần dữ liệu gắn nhãn tốn kém. Không chỉ vậy, DeepSeek còn mở mã nguồn mở hoàn toàn mô hình, cho phép cộng đồng phát triển tự do tải về và triển khai cục bộ.
 
 Điều này chứng minh rằng: Cuộc đua AI không chỉ là câu chuyện dùng tiền đè người với hàng trăm nghìn card GPU đắt đỏ, mà trí tuệ tối ưu hóa thuật toán mới là chìa khóa mở ra tương lai AI giá rẻ cho nhân loại.`;
+
+// Sample titles for viral title generator demonstration
+const SAMPLE_TITLES = [
+  "Tại sao người ta lại sợ mua xe điện?",
+  "Bí mật đằng sau sự trỗi dậy của DeepSeek",
+  "Lý do khiến 90% nhà đầu tư thua lỗ trên thị trường tài chính",
+  "Sự thật giật mình về thói quen thức khuya mỗi ngày",
+  "Cách người giàu âm thầm bảo vệ tài sản trong thời kỳ khủng hoảng",
+  "Tại sao các đế chế công nghệ lại sa thải hàng loạt kỹ sư?"
+];
+
+// Target languages configuration for title generator
+const TITLE_TARGET_LANGUAGES = {
+  vi: { name: 'Tiếng Việt', flag: '🇻🇳', promptDesc: 'Tiếng Việt tự nhiên, chuẩn phong cách YouTube Creator Việt Nam' },
+  en: { name: 'English', flag: '🇺🇸', promptDesc: 'High-CTR viral English for US/Global YouTube audience' },
+  zh: { name: '中文 (Tiếng Trung)', flag: '🇨🇳', promptDesc: 'Chuyên nghiệp, lôi cuốn, đúng văn phong người xem YouTube tiếng Trung (Mandarin)' },
+  ja: { name: '日本語 (Tiếng Nhật)', flag: '🇯🇵', promptDesc: 'Chuẩn phong cách tiêu đề YouTube Nhật Bản, cuốn hút và kích thích tò mò' },
+  ko: { name: '한국어 (Tiếng Hàn)', flag: '🇰🇷', promptDesc: 'Chuẩn phong cách YouTube Hàn Quốc, giật gân, cuốn hút' },
+  es: { name: 'Español (Tây Ban Nha)', flag: '🇪🇸', promptDesc: 'Español nativo, estilo viral de YouTube para España y Latinoamérica' },
+  pt: { name: 'Português (Bồ Đào Nha)', flag: '🇵🇹', promptDesc: 'Português de Portugal natural, estilo envolvente para YouTube' },
+  br: { name: 'Português do Brasil', flag: '🇧🇷', promptDesc: 'Português brasileiro nativo, altamente viral e dinâmico para YouTube Brasil' }
+};
 
 // Gemini API Constants
 const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
@@ -78,6 +116,53 @@ const DOM = {
   btnOpenSettings: document.getElementById('btnOpenSettings'),
   btnOpenGeneralSettings: document.getElementById('btnOpenGeneralSettings'),
   headerUpdateBadgeDot: document.getElementById('headerUpdateBadgeDot'),
+
+  // Studio Sidebar & Multi-Module Routing
+  btnNavScript: document.getElementById('btnNavScript'),
+  btnNavTitle: document.getElementById('btnNavTitle'),
+  btnNavSettings: document.getElementById('btnNavSettings'),
+  sidebarStatusDot: document.getElementById('sidebarStatusDot'),
+  sidebarUpdateDot: document.getElementById('sidebarUpdateDot'),
+  viewScriptwriter: document.getElementById('viewScriptwriter'),
+  viewTitleGenerator: document.getElementById('viewTitleGenerator'),
+  viewSettings: document.getElementById('viewSettings'),
+  btnBackToScript: document.getElementById('btnBackToScript'),
+  btnBackToScriptText: document.getElementById('btnBackToScriptText'),
+  headerSubtitleText: document.getElementById('headerSubtitleText'),
+  tabNavGeneral: document.getElementById('tabNavGeneral'),
+  tabNavApiKeys: document.getElementById('tabNavApiKeys'),
+  tabNavUpdates: document.getElementById('tabNavUpdates'),
+  tabUpdateDot: document.getElementById('tabUpdateDot'),
+  panelSettingsGeneral: document.getElementById('panelSettingsGeneral'),
+  panelSettingsApiKeys: document.getElementById('panelSettingsApiKeys'),
+  panelSettingsUpdates: document.getElementById('panelSettingsUpdates'),
+  selTitleDefaultLang: document.getElementById('selTitleDefaultLang'),
+  chkAutoCheckUpdateStartup: document.getElementById('chkAutoCheckUpdateStartup'),
+
+  // Module 2: Title Generator Elements
+  btnSampleTitle: document.getElementById('btnSampleTitle'),
+  btnPasteTitle: document.getElementById('btnPasteTitle'),
+  btnClearTitle: document.getElementById('btnClearTitle'),
+  inputOriginalTitle: document.getElementById('inputOriginalTitle'),
+  titleCharCount: document.getElementById('titleCharCount'),
+  titleWordCount: document.getElementById('titleWordCount'),
+  titleSelectedLangBadge: document.getElementById('titleSelectedLangBadge'),
+  titleLangGrid: document.getElementById('titleLangGrid'),
+  btnGenerateTitles: document.getElementById('btnGenerateTitles'),
+  btnGenerateTitlesText: document.getElementById('btnGenerateTitlesText'),
+  btnCopyAllTitles: document.getElementById('btnCopyAllTitles'),
+  btnRegenerateTitles: document.getElementById('btnRegenerateTitles'),
+  titleOutputStatusDesc: document.getElementById('titleOutputStatusDesc'),
+  titleOutputBody: document.getElementById('titleOutputBody'),
+  titleEmptyState: document.getElementById('titleEmptyState'),
+  titleLoadingState: document.getElementById('titleLoadingState'),
+  titleLoadingText: document.getElementById('titleLoadingText'),
+  titleResultsList: document.getElementById('titleResultsList'),
+  titleCountPill: document.getElementById('titleCountPill'),
+  titleStatusBadge: document.getElementById('titleStatusBadge'),
+  titleStatusText: document.getElementById('titleStatusText'),
+  titleMetaLang: document.getElementById('titleMetaLang'),
+  titleCountStat: document.getElementById('titleCountStat'),
 
   // Left Panel (Input & Options)
   inputOriginal: document.getElementById('inputOriginal'),
@@ -236,6 +321,8 @@ async function loadSettings() {
         saved.providers.forEach(p => {
           if (p.isVerified) {
             state.connectionVerified[p.id] = true;
+            const baseUrl = resolveBaseUrl(p);
+            p.verifiedSignature = `${p.apiKey || ''}@@${baseUrl}@@${p.providerType || 'openai'}`;
           }
         });
         loadSavedPreferences();
@@ -259,8 +346,20 @@ function loadSavedPreferences() {
     if (rawPref) {
       const parsed = JSON.parse(rawPref);
       state.preferences = { ...state.preferences, ...parsed };
+
+      // Backward compatibility: migrate legacy lineSpacing
+      if (parsed.lineSpacing && (!parsed.scriptwriter || !parsed.scriptwriter.lineSpacing)) {
+        state.preferences.scriptwriter = state.preferences.scriptwriter || {};
+        state.preferences.scriptwriter.lineSpacing = parsed.lineSpacing;
+      }
     }
   } catch (e) {}
+
+  // Apply Title Module default language preference if configured
+  const titlePrefLang = state.preferences?.titleGenerator?.defaultLanguage;
+  if (titlePrefLang && titlePrefLang !== 'last_used' && TITLE_TARGET_LANGUAGES[titlePrefLang]) {
+    selectTargetLanguage(titlePrefLang);
+  }
 
   const isAutoRotate = state.preferences?.autoRotateModels !== false;
   if (DOM.chkAutoRotateModal) DOM.chkAutoRotateModal.checked = isAutoRotate;
@@ -275,8 +374,176 @@ function setAutoRotatePreference(enabled) {
   } catch (e) {}
 }
 
+// ===================================================================
+// STUDIO MULTI-MODULE VIEW ROUTER
+// ===================================================================
+function switchMainView(viewName, settingsTab = 'general') {
+  if (state.isGenerating && viewName !== 'script') {
+    showToast('Đang tạo kịch bản, vui lòng đợi hoàn tất trước khi chuyển trang!', 'warning');
+    return;
+  }
+  if (state.titleState?.isGenerating && viewName !== 'title') {
+    showToast('Đang tạo tiêu đề, vui lòng đợi hoàn tất trước khi chuyển trang!', 'warning');
+    return;
+  }
+
+  // Hide popover if open
+  if (DOM.quickApiMenu) DOM.quickApiMenu.classList.add('hidden');
+  if (DOM.pillChevron) DOM.pillChevron.classList.remove('rotate');
+
+  // Reset active tabs & views
+  [DOM.btnNavScript, DOM.btnNavTitle, DOM.btnNavSettings].forEach(btn => {
+    if (btn) btn.classList.remove('active');
+  });
+  [DOM.viewScriptwriter, DOM.viewTitleGenerator, DOM.viewSettings].forEach(view => {
+    if (view) view.classList.add('hidden');
+  });
+
+  if (viewName === 'script') {
+    state.activeWorkspaceView = 'script';
+    if (DOM.viewScriptwriter) DOM.viewScriptwriter.classList.remove('hidden');
+    if (DOM.btnNavScript) DOM.btnNavScript.classList.add('active');
+    if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'AI Scriptwriter & YouTube Content Studio';
+    checkReadiness();
+  } else if (viewName === 'title') {
+    state.activeWorkspaceView = 'title';
+    if (DOM.viewTitleGenerator) DOM.viewTitleGenerator.classList.remove('hidden');
+    if (DOM.btnNavTitle) DOM.btnNavTitle.classList.add('active');
+    if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'AI Viral Title Generator & YouTube CTR Studio';
+    checkTitleReadiness();
+  } else if (viewName === 'settings') {
+    if (DOM.viewSettings) DOM.viewSettings.classList.remove('hidden');
+    if (DOM.btnNavSettings) DOM.btnNavSettings.classList.add('active');
+    if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'Trung tâm Cài đặt & Cấu hình API';
+
+    // Dynamic back button label according to current active workspace
+    const backText = state.activeWorkspaceView === 'title' ? 'Quay lại Tiêu đề' : 'Quay lại Kịch bản';
+    if (DOM.btnBackToScriptText) DOM.btnBackToScriptText.textContent = backText;
+    if (DOM.btnBackToScript) DOM.btnBackToScript.title = `Quay lại bàn làm việc ${state.activeWorkspaceView === 'title' ? 'Tiêu đề' : 'Kịch bản'}`;
+
+    switchSettingsTab(settingsTab);
+  }
+}
+
+function switchSettingsTab(tabName) {
+  const tabs = [
+    { name: 'general', btn: DOM.tabNavGeneral, panel: DOM.panelSettingsGeneral },
+    { name: 'apikeys', btn: DOM.tabNavApiKeys, panel: DOM.panelSettingsApiKeys },
+    { name: 'updates', btn: DOM.tabNavUpdates, panel: DOM.panelSettingsUpdates }
+  ];
+
+  tabs.forEach(t => {
+    if (t.name === tabName) {
+      if (t.btn) t.btn.classList.add('active');
+      if (t.panel) t.panel.classList.remove('hidden');
+    } else {
+      if (t.btn) t.btn.classList.remove('active');
+      if (t.panel) t.panel.classList.add('hidden');
+    }
+  });
+
+  if (tabName === 'apikeys') {
+    if (!state.currentEditingProviderId) {
+      state.currentEditingProviderId = state.settings.activeProviderId || (state.settings.providers[0] && state.settings.providers[0].id);
+    }
+    renderProviderTabs();
+    loadEditingProviderIntoModal();
+  } else if (tabName === 'general') {
+    // 1. Scriptwriter Module settings
+    const currentSpacing = (state.preferences?.scriptwriter?.lineSpacing) || state.preferences?.lineSpacing || 'tight';
+    if (currentSpacing === 'normal') {
+      if (DOM.optSpacingNormal) DOM.optSpacingNormal.checked = true;
+      if (DOM.cardSpacingNormal) DOM.cardSpacingNormal.classList.add('active');
+      if (DOM.cardSpacingTight) DOM.cardSpacingTight.classList.remove('active');
+    } else {
+      if (DOM.optSpacingTight) DOM.optSpacingTight.checked = true;
+      if (DOM.cardSpacingTight) DOM.cardSpacingTight.classList.add('active');
+      if (DOM.cardSpacingNormal) DOM.cardSpacingNormal.classList.remove('active');
+    }
+
+    // 2. Title Generator Module settings
+    const titleDefaultLang = state.preferences?.titleGenerator?.defaultLanguage || 'last_used';
+    if (DOM.selTitleDefaultLang) {
+      DOM.selTitleDefaultLang.value = titleDefaultLang;
+    }
+
+    // 3. System Preferences
+    const autoCheckUpdate = state.preferences?.system?.autoCheckUpdate !== false;
+    if (DOM.chkAutoCheckUpdateStartup) {
+      DOM.chkAutoCheckUpdateStartup.checked = autoCheckUpdate;
+    }
+  }
+}
+
 // Bind all UI Event Listeners
 function bindEvents() {
+  // Studio Sidebar & Multi-Module Routing
+  if (DOM.btnNavScript) {
+    DOM.btnNavScript.addEventListener('click', () => switchMainView('script'));
+  }
+  if (DOM.btnNavTitle) {
+    DOM.btnNavTitle.addEventListener('click', () => switchMainView('title'));
+  }
+  if (DOM.btnNavSettings) {
+    DOM.btnNavSettings.addEventListener('click', () => switchMainView('settings', 'general'));
+  }
+  if (DOM.btnBackToScript) {
+    DOM.btnBackToScript.addEventListener('click', () => switchMainView(state.activeWorkspaceView || 'script'));
+  }
+
+  // Module 2: Title Generator Event Bindings
+  if (DOM.inputOriginalTitle) {
+    DOM.inputOriginalTitle.addEventListener('input', updateTitleInputCounts);
+  }
+  if (DOM.btnSampleTitle) {
+    DOM.btnSampleTitle.addEventListener('click', loadSampleTitle);
+  }
+  if (DOM.btnPasteTitle) {
+    DOM.btnPasteTitle.addEventListener('click', pasteTitleInput);
+  }
+  if (DOM.btnClearTitle) {
+    DOM.btnClearTitle.addEventListener('click', clearTitleInput);
+  }
+  if (DOM.titleLangGrid) {
+    const langPills = DOM.titleLangGrid.querySelectorAll('.title-lang-pill');
+    langPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        const lang = pill.getAttribute('data-lang');
+        if (lang) selectTitleTargetLanguage(lang);
+      });
+    });
+  }
+  if (DOM.btnGenerateTitles) {
+    DOM.btnGenerateTitles.addEventListener('click', () => {
+      if (state.titleState.isGenerating) {
+        stopTitleGeneration();
+      } else {
+        startTitleGeneration();
+      }
+    });
+  }
+  if (DOM.btnCopyAllTitles) {
+    DOM.btnCopyAllTitles.addEventListener('click', copyAllTitlesToClipboard);
+  }
+  if (DOM.btnRegenerateTitles) {
+    DOM.btnRegenerateTitles.addEventListener('click', () => {
+      if (!state.titleState.isGenerating) {
+        startTitleGeneration();
+      }
+    });
+  }
+
+  // Settings Tabs Navigation
+  if (DOM.tabNavGeneral) {
+    DOM.tabNavGeneral.addEventListener('click', () => switchSettingsTab('general'));
+  }
+  if (DOM.tabNavApiKeys) {
+    DOM.tabNavApiKeys.addEventListener('click', () => switchSettingsTab('apikeys'));
+  }
+  if (DOM.tabNavUpdates) {
+    DOM.tabNavUpdates.addEventListener('click', () => switchSettingsTab('updates'));
+  }
+
   // Quick API Switcher & Settings
   DOM.btnOpenModelPicker.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -644,6 +911,10 @@ function updateHeaderActiveModel() {
       DOM.headerStatusDot.className = 'status-indicator-dot offline';
       DOM.headerStatusDot.title = 'Chưa cấu hình API Key';
     }
+    if (DOM.sidebarStatusDot) {
+      DOM.sidebarStatusDot.className = 'status-indicator-dot offline';
+      DOM.sidebarStatusDot.title = 'Chưa cấu hình API Key';
+    }
     return;
   }
 
@@ -657,7 +928,13 @@ function updateHeaderActiveModel() {
     const isOnline = !!(currentProvider.apiKey && currentProvider.apiKey.trim().length > 5 && (currentProvider.isVerified || state.connectionVerified?.[currentProvider.id]));
     DOM.headerStatusDot.className = `status-indicator-dot ${isOnline ? 'online' : 'offline'}`;
     DOM.headerStatusDot.title = isOnline ? 'Đã xác thực kết nối máy chủ (Online)' : 'Chưa kết nối hoặc Key không hợp lệ (Offline)';
+    if (DOM.sidebarStatusDot) {
+      DOM.sidebarStatusDot.className = DOM.headerStatusDot.className;
+      DOM.sidebarStatusDot.title = DOM.headerStatusDot.title;
+    }
   }
+
+  checkTitleReadiness();
 }
 
 // ===================================================================
@@ -1247,15 +1524,12 @@ function openSettingsModal(targetProviderId = null) {
     || state.settings.activeProviderId 
     || (state.settings.providers[0] && state.settings.providers[0].id);
 
-  renderProviderTabs();
-  loadEditingProviderIntoModal();
+  switchMainView('settings', 'apikeys');
   updateTestConnectionCard('default', 'Trạng thái kết nối API', 'Bấm nút bên phải để kiểm tra API Key và máy chủ trước khi lưu.');
-  DOM.settingsModal.classList.remove('hidden');
 }
 
 function closeSettingsModal() {
-  DOM.settingsModal.classList.add('hidden');
-  checkReadiness();
+  switchMainView('script');
 }
 
 function renderProviderTabs() {
@@ -1360,6 +1634,11 @@ function loadEditingProviderIntoModal() {
   DOM.cfgApiKey.classList.remove('input-error');
 
   const isOnline = !!(provider.apiKey && (provider.isVerified || state.connectionVerified?.[provider.id]));
+  if (isOnline && !provider.verifiedSignature) {
+    const rawBaseUrl = (DOM.cfgBaseUrl.value || provider.baseUrl || '').trim();
+    const resolvedUrl = resolveBaseUrl({ ...provider, baseUrl: rawBaseUrl });
+    provider.verifiedSignature = `${provider.apiKey}@@${resolvedUrl}@@${provider.providerType || (isGemini ? 'gemini' : 'openai')}`;
+  }
   if (DOM.modalHeaderStatusDot) {
     DOM.modalHeaderStatusDot.className = `status-indicator-dot ${isOnline ? 'online' : 'offline'}`;
     DOM.modalHeaderStatusDot.title = isOnline ? 'Đã xác thực kết nối máy chủ (Online)' : 'Chưa kết nối hoặc Key không hợp lệ (Offline)';
@@ -1574,6 +1853,7 @@ async function testProviderConnection() {
       state.connectionVerified = state.connectionVerified || {};
       state.connectionVerified[provider.id] = true;
       provider.isVerified = true;
+      provider.verifiedSignature = `${apiKey}@@${baseUrl}@@${provider.providerType}`;
       updateTestConnectionCard('success', '✓ Kết nối thành công!', res.message || 'API Key và máy chủ hoạt động tốt.');
       if (DOM.modalHeaderStatusDot) {
         DOM.modalHeaderStatusDot.className = 'status-indicator-dot online';
@@ -1842,7 +2122,7 @@ async function addNewProvider(type = 'openai') {
   renderProviderTabs();
   loadEditingProviderIntoModal();
   updateTestConnectionCard('default', 'Trạng thái kết nối API', 'Bấm nút bên phải để kiểm tra API Key và máy chủ trước khi lưu.');
-  DOM.settingsModal.classList.remove('hidden');
+  switchMainView('settings', 'apikeys');
 
   DOM.cfgApiKey.focus();
   showToast('Đã tạo API mới. Bạn có thể chọn Cách 1 hoặc Cách 2 rồi dán API Key!', 'info');
@@ -1878,10 +2158,50 @@ async function saveAndApplySettings() {
     return;
   }
 
-  // Automatic connection verification before saving
+  // Calculate current configuration signature to check if verification is still valid
+  const currentSignature = `${apiKey}@@${baseUrl}@@${provider.providerType}`;
+  const isAlreadyVerified = (provider.isVerified || state.connectionVerified?.[provider.id]) 
+    && (provider.verifiedSignature === currentSignature);
+
+  // If already verified with this exact key & base URL, skip network test and save instantly!
+  if (isAlreadyVerified) {
+    delete provider.isNew;
+    provider.isVerified = true;
+    state.connectionVerified = state.connectionVerified || {};
+    state.connectionVerified[provider.id] = true;
+    provider.verifiedSignature = currentSignature;
+
+    state.settings.activeProviderId = state.currentEditingProviderId;
+    if (provider.models && provider.models.length > 0) {
+      if (!provider.models.some(m => m.id === state.settings.activeModelId)) {
+        state.settings.activeModelId = provider.models[0].id;
+      }
+    }
+
+    try {
+      if (window.api && window.api.saveSavedApis) {
+        await window.api.saveSavedApis({
+          activeProviderId: state.settings.activeProviderId,
+          activeModelId: state.settings.activeModelId,
+          providers: state.settings.providers
+        });
+      }
+    } catch (err) {
+      console.error('Failed to save saved_apis:', err);
+    }
+
+    renderProviderTabs();
+    updateHeaderActiveModel();
+    closeSettingsModal();
+    checkReadiness();
+    showToast('✓ Đã lưu cấu hình API thành công!', 'success');
+    return;
+  }
+
+  // Otherwise (new key or changed URL): Automatic connection verification before saving
   DOM.btnApplySettings.disabled = true;
   const originalApplyText = DOM.btnApplySettings.textContent;
-  DOM.btnApplySettings.textContent = 'Đang kiểm tra kết nối...';
+  DOM.btnApplySettings.innerHTML = '<span class="spinner-sm" style="display:inline-block;width:13px;height:13px;margin-right:6px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;vertical-align:-2px;"></span> Đang kiểm tra...';
   
   const serverName = isGemini 
     ? (apiKey.startsWith('AIzaSy') ? 'Google Gemini' : (apiKey.startsWith('gsk_') ? 'Groq' : (apiKey.startsWith('sk-or-') ? 'OpenRouter' : 'máy chủ API')))
@@ -1922,6 +2242,7 @@ async function saveAndApplySettings() {
   state.connectionVerified = state.connectionVerified || {};
   state.connectionVerified[provider.id] = true;
   provider.isVerified = true;
+  provider.verifiedSignature = currentSignature;
 
   DOM.cfgApiKey.classList.remove('input-error');
   updateTestConnectionCard('success', '✓ Kết nối thành công!', res.message || 'API Key và máy chủ hoạt động tốt.');
@@ -1963,31 +2284,39 @@ async function saveAndApplySettings() {
 // ===================================================================
 function openGeneralSettingsModal() {
   if (state.isGenerating) return;
-
-  const currentSpacing = (state.preferences && state.preferences.lineSpacing) || 'tight';
-  if (currentSpacing === 'normal') {
-    DOM.optSpacingNormal.checked = true;
-    DOM.cardSpacingNormal.classList.add('active');
-    DOM.cardSpacingTight.classList.remove('active');
-  } else {
-    DOM.optSpacingTight.checked = true;
-    DOM.cardSpacingTight.classList.add('active');
-    DOM.cardSpacingNormal.classList.remove('active');
-  }
-
-  DOM.generalSettingsModal.classList.remove('hidden');
+  switchMainView('settings', 'general');
 }
 
 function closeGeneralSettingsModal() {
-  DOM.generalSettingsModal.classList.add('hidden');
+  switchMainView(state.activeWorkspaceView || 'script');
 }
 
 function saveGeneralSettings() {
-  const isTight = DOM.optSpacingTight.checked;
+  const isTight = DOM.optSpacingTight ? DOM.optSpacingTight.checked : true;
   const newSpacing = isTight ? 'tight' : 'normal';
 
+  // Modular scoped state preferences
   state.preferences = state.preferences || {};
-  state.preferences.lineSpacing = newSpacing;
+
+  // 1. Scriptwriter Module
+  state.preferences.scriptwriter = state.preferences.scriptwriter || {};
+  state.preferences.scriptwriter.lineSpacing = newSpacing;
+  state.preferences.lineSpacing = newSpacing; // Legacy alias for backward compatibility
+
+  // 2. Title Generator Module
+  state.preferences.titleGenerator = state.preferences.titleGenerator || {};
+  if (DOM.selTitleDefaultLang) {
+    state.preferences.titleGenerator.defaultLanguage = DOM.selTitleDefaultLang.value;
+    if (DOM.selTitleDefaultLang.value !== 'last_used' && TITLE_TARGET_LANGUAGES[DOM.selTitleDefaultLang.value]) {
+      selectTargetLanguage(DOM.selTitleDefaultLang.value);
+    }
+  }
+
+  // 3. System Preferences
+  state.preferences.system = state.preferences.system || {};
+  if (DOM.chkAutoCheckUpdateStartup) {
+    state.preferences.system.autoCheckUpdate = DOM.chkAutoCheckUpdateStartup.checked;
+  }
 
   try {
     localStorage.setItem('autocontent_preferences', JSON.stringify(state.preferences));
@@ -2001,7 +2330,7 @@ function saveGeneralSettings() {
   }
 
   closeGeneralSettingsModal();
-  showToast(`Đã lưu cài đặt! Kịch bản đang ở chế độ: ${isTight ? 'Sát dòng (Không khoảng trống)' : 'Dãn đoạn tiêu chuẩn'}`, 'success');
+  showToast('✓ Đã lưu cấu hình các mô-đun thành công!', 'success');
 }
 
 // ===================================================================
@@ -2028,6 +2357,7 @@ async function initUpdateSystem() {
 
 function handleUpdateDetected(updateData, isManual = false) {
   if (!updateData || !updateData.hasUpdate) return;
+  if (!isManual && state.preferences?.system?.autoCheckUpdate === false) return;
   state.pendingUpdate = updateData;
 
   if (DOM.currentAppVersionDisplay) {
@@ -2041,9 +2371,15 @@ function handleUpdateDetected(updateData, isManual = false) {
   const dismissedKey = 'dismissed_update_' + updateData.latestVersion;
   const isDismissed = sessionStorage.getItem(dismissedKey) === 'true';
 
-  // Always show subtle badge dot on header settings button
+  // Always show subtle badge dot on header & sidebar settings button
   if (DOM.headerUpdateBadgeDot) {
     DOM.headerUpdateBadgeDot.classList.remove('hidden');
+  }
+  if (DOM.sidebarUpdateDot) {
+    DOM.sidebarUpdateDot.classList.remove('hidden');
+  }
+  if (DOM.tabUpdateDot) {
+    DOM.tabUpdateDot.classList.remove('hidden');
   }
 
   // If auto-detected on startup and previously postponed in this session, do NOT pop up
@@ -2228,5 +2564,731 @@ function dismissToast() {
   }
 }
 
+// ===================================================================
+// MODULE 2: VIRAL TITLE AI GENERATOR CONTROLLER
+// ===================================================================
+
+function updateTitleInputCounts() {
+  const text = (DOM.inputOriginalTitle?.value || '').trim();
+  const charCount = text.length;
+  const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
+
+  if (DOM.titleCharCount) DOM.titleCharCount.textContent = `${charCount} ký tự`;
+  if (DOM.titleWordCount) DOM.titleWordCount.textContent = `${wordCount} từ`;
+
+  checkTitleReadiness();
+}
+
+function checkTitleReadiness() {
+  const provider = state.settings.providers.find(p => p.id === state.settings.activeProviderId);
+  const hasProvider = Boolean(provider && provider.apiKey);
+  const text = (DOM.inputOriginalTitle?.value || '').trim();
+
+  if (DOM.btnGenerateTitles && !state.titleState.isGenerating) {
+    if (!hasProvider) {
+      DOM.btnGenerateTitles.disabled = true;
+      DOM.btnGenerateTitles.classList.add('disabled');
+      DOM.btnGenerateTitles.title = 'Vui lòng cấu hình API Key trong Cài đặt trước!';
+    } else {
+      DOM.btnGenerateTitles.disabled = false;
+      DOM.btnGenerateTitles.classList.remove('disabled');
+      DOM.btnGenerateTitles.title = text ? 'Bấm để tạo 10 tiêu đề YouTube viral' : 'Vui lòng nhập tiêu đề gốc';
+    }
+  }
+}
+
+function selectTitleTargetLanguage(langKey) {
+  if (state.titleState.isGenerating) return;
+
+  const langObj = TITLE_TARGET_LANGUAGES[langKey];
+  if (!langObj) return;
+
+  state.titleState.targetLanguage = langKey;
+
+  // Update pills active state
+  if (DOM.titleLangGrid) {
+    const pills = DOM.titleLangGrid.querySelectorAll('.title-lang-pill');
+    pills.forEach(p => {
+      if (p.getAttribute('data-lang') === langKey) {
+        p.classList.add('active');
+      } else {
+        p.classList.remove('active');
+      }
+    });
+  }
+
+  // Update badge and meta stat bar
+  if (DOM.titleSelectedLangBadge) {
+    DOM.titleSelectedLangBadge.textContent = `Đang chọn: ${langObj.flag} ${langObj.name}`;
+  }
+  if (DOM.titleMetaLang) {
+    DOM.titleMetaLang.textContent = langObj.name;
+  }
+}
+
+function loadSampleTitle() {
+  if (state.titleState.isGenerating) return;
+  const current = (DOM.inputOriginalTitle?.value || '').trim();
+  let next = SAMPLE_TITLES[0];
+  const idx = SAMPLE_TITLES.indexOf(current);
+  if (idx >= 0 && idx < SAMPLE_TITLES.length - 1) {
+    next = SAMPLE_TITLES[idx + 1];
+  } else if (idx === SAMPLE_TITLES.length - 1) {
+    next = SAMPLE_TITLES[0];
+  }
+
+  if (DOM.inputOriginalTitle) {
+    DOM.inputOriginalTitle.value = next;
+    updateTitleInputCounts();
+    DOM.inputOriginalTitle.focus();
+    showToast('Đã điền tiêu đề mẫu!', 'info', 1000);
+  }
+}
+
+async function pasteTitleInput() {
+  if (state.titleState.isGenerating) return;
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && DOM.inputOriginalTitle) {
+      DOM.inputOriginalTitle.value = text.trim();
+      updateTitleInputCounts();
+      DOM.inputOriginalTitle.focus();
+      showToast('Đã dán tiêu đề từ clipboard!', 'success', 1000);
+    } else {
+      showToast('Bộ nhớ tạm trống!', 'warning', 1000);
+    }
+  } catch (err) {
+    showToast('Không thể truy cập Clipboard!', 'danger', 1200);
+  }
+}
+
+function clearTitleInput() {
+  if (state.titleState.isGenerating) return;
+  if (DOM.inputOriginalTitle) {
+    DOM.inputOriginalTitle.value = '';
+    updateTitleInputCounts();
+    DOM.inputOriginalTitle.focus();
+  }
+}
+
+function setTitleGeneratingUIState(isGenerating) {
+  state.titleState.isGenerating = isGenerating;
+
+  if (DOM.btnGenerateTitles) {
+    if (isGenerating) {
+      DOM.btnGenerateTitles.classList.add('stop-mode');
+      if (DOM.btnGenerateTitlesText) DOM.btnGenerateTitlesText.textContent = 'DỪNG TẠO (STOP)';
+    } else {
+      DOM.btnGenerateTitles.classList.remove('stop-mode');
+      if (DOM.btnGenerateTitlesText) DOM.btnGenerateTitlesText.textContent = 'TẠO 5 TIÊU ĐỀ TINH HOA ĐỘT PHÁ';
+    }
+  }
+
+  if (DOM.inputOriginalTitle) {
+    DOM.inputOriginalTitle.disabled = isGenerating;
+  }
+
+  if (DOM.btnSampleTitle) DOM.btnSampleTitle.disabled = isGenerating;
+  if (DOM.btnPasteTitle) DOM.btnPasteTitle.disabled = isGenerating;
+  if (DOM.btnClearTitle) DOM.btnClearTitle.disabled = isGenerating;
+
+  if (DOM.titleLangGrid) {
+    const pills = DOM.titleLangGrid.querySelectorAll('.title-lang-pill');
+    pills.forEach(p => {
+      p.disabled = isGenerating;
+      p.style.pointerEvents = isGenerating ? 'none' : 'auto';
+      p.style.opacity = isGenerating ? '0.7' : '1';
+    });
+  }
+
+  if (isGenerating) {
+    if (DOM.titleEmptyState) DOM.titleEmptyState.classList.add('hidden');
+    if (DOM.titleResultsList) DOM.titleResultsList.classList.add('hidden');
+    if (DOM.titleLoadingState) DOM.titleLoadingState.classList.remove('hidden');
+    if (DOM.btnCopyAllTitles) DOM.btnCopyAllTitles.disabled = true;
+    if (DOM.btnRegenerateTitles) DOM.btnRegenerateTitles.disabled = true;
+    if (DOM.titleStatusText) DOM.titleStatusText.textContent = 'Đang tạo...';
+    if (DOM.titleStatusBadge) DOM.titleStatusBadge.className = 'output-status-pill in-progress';
+  } else {
+    if (DOM.titleLoadingState) DOM.titleLoadingState.classList.add('hidden');
+    if (state.titleState.titles && state.titleState.titles.length > 0) {
+      if (DOM.titleStatusText) DOM.titleStatusText.textContent = 'Hoàn tất';
+      if (DOM.titleStatusBadge) DOM.titleStatusBadge.className = 'output-status-pill completed';
+      if (DOM.btnCopyAllTitles) DOM.btnCopyAllTitles.disabled = false;
+      if (DOM.btnRegenerateTitles) DOM.btnRegenerateTitles.disabled = false;
+    } else {
+      if (DOM.titleStatusText) DOM.titleStatusText.textContent = 'Sẵn sàng';
+      if (DOM.titleStatusBadge) DOM.titleStatusBadge.className = 'output-status-pill';
+    }
+    checkTitleReadiness();
+  }
+}
+
+function stopTitleGeneration() {
+  if (state.titleState.abortController) {
+    state.titleState.abortController.abort();
+    state.titleState.abortController = null;
+  }
+  setTitleGeneratingUIState(false);
+  if (DOM.titleOutputStatusDesc) DOM.titleOutputStatusDesc.textContent = 'Đã dừng tạo tiêu đề.';
+  showToast('Đã dừng tạo tiêu đề!', 'warning', 1200);
+
+  if (!state.titleState.titles || state.titleState.titles.length === 0) {
+    if (DOM.titleEmptyState) DOM.titleEmptyState.classList.remove('hidden');
+  } else {
+    if (DOM.titleResultsList) DOM.titleResultsList.classList.remove('hidden');
+  }
+}
+
+async function startTitleGeneration() {
+  const rawInput = (DOM.inputOriginalTitle?.value || '').trim();
+  if (!rawInput) {
+    showToast('Vui lòng nhập tiêu đề gốc trước khi tạo!', 'warning');
+    DOM.inputOriginalTitle?.focus();
+    return;
+  }
+
+  // Active provider & model
+  const provider = state.settings.providers.find(p => p.id === state.settings.activeProviderId);
+  if (!provider || !provider.apiKey) {
+    showToast(`Vui lòng cấu hình API Key cho ${provider ? provider.displayName : 'hệ thống'}!`, 'warning');
+    switchMainView('settings', 'apikeys');
+    return;
+  }
+
+  const isGemini = (provider.providerType === 'gemini')
+    || (provider.apiKey && provider.apiKey.trim().startsWith('AIzaSy'))
+    || (provider.baseUrl && provider.baseUrl.includes('googleapis.com'));
+
+  let candidateModels = [];
+  if (provider.models && provider.models.length > 0) {
+    candidateModels = provider.models.map(m => (typeof m === 'string' ? m : m.id)).filter(Boolean);
+  } else if (isGemini) {
+    candidateModels = GEMINI_DEFAULT_MODELS.map(m => m.id);
+  }
+
+  const initialModelId = state.settings.activeModelId || candidateModels[0];
+  if (!initialModelId && candidateModels.length === 0) {
+    showToast('Chưa chọn model AI nào!', 'warning');
+    switchMainView('settings', 'apikeys');
+    return;
+  }
+
+  if (candidateModels.length > 1 && initialModelId) {
+    const idx = candidateModels.indexOf(initialModelId);
+    if (idx > 0) {
+      candidateModels = [...candidateModels.slice(idx), ...candidateModels.slice(0, idx)];
+    }
+  } else if (candidateModels.length === 0) {
+    candidateModels = [initialModelId];
+  }
+
+  const isAutoRotateEnabled = isGemini 
+    && (DOM.chkAutoRotateModal ? DOM.chkAutoRotateModal.checked : true)
+    && (state.preferences?.autoRotateModels !== false);
+
+  if (!isAutoRotateEnabled) {
+    candidateModels = [initialModelId];
+  }
+
+  const targetLangKey = state.titleState.targetLanguage || 'vi';
+  const targetLangObj = TITLE_TARGET_LANGUAGES[targetLangKey] || TITLE_TARGET_LANGUAGES.vi;
+
+  const now = new Date();
+  const dateStr = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
+
+  const systemPrompt = `Bạn là Chuyên gia hàng đầu thế giới về Tối ưu hóa Tiêu đề YouTube (YouTube Title Strategist & CTR Master) với hơn 10 năm kinh nghiệm nghiên cứu thuật toán đề xuất và tâm lý học người xem YouTube (YouTube Viewer Psychology).
+NGỮ CẢNH THỜI GIAN THỰC HIỆN TẠI: ${dateStr}.
+
+Nhiệm vụ của bạn: Từ tiêu đề gốc duy nhất do người dùng cung cấp, hãy đào sâu bóc tách khoảng trống tò mò (Curiosity Gap) và tâm lý người xem ở thời điểm hiện tại (${dateStr}) để sáng tạo đúng 5 TIÊU ĐỀ YOUTUBE TINH HOA ĐỘT PHÁ NHẤT bằng ngôn ngữ mục tiêu: ${targetLangObj.name}.
+
+QUY TẮC BẮT BUỘC (MA TRẬN 5 VŨ KHÍ CTR CHIỀU SÂU):
+Toàn bộ tiêu đề tạo ra phải bằng 100% ${targetLangObj.name} (${targetLangObj.promptDesc}), độ dài tối ưu chuẩn YouTube Mobile (40 - 65 ký tự, không bị cắt dấu ba chấm).
+Mỗi tiêu đề đại diện cho đúng 1 vũ khí tâm lý độc lập:
+1. Tiêu đề 1 [Tò mò tột độ - Curiosity Gap]: Khoảng trống thông tin cực đại, thôi thúc bấm xem ngay. Đặt "isTopPick": true và cung cấp "pickReason" (1 câu giải thích lý do thuật toán chọn).
+2. Tiêu đề 2 [Nghịch lý & Xung đột - The Paradox]: Đặt 2 sự thật mâu thuẫn để tạo tranh luận và kích thích người xem click để kiểm chứng. Đặt "isTopPick": false.
+3. Tiêu đề 3 [Con số & Bằng chứng - Proof & Data]: Con số cụ thể, dữ liệu thực tế tạo độ tin cậy và tò mò logic. Đặt "isTopPick": false.
+4. Tiêu đề 4 [Cảnh báo / Chống số đông - Contrarian & FOMO]: Phản biện lại định kiến thông thường hoặc cảnh báo sai lầm. Đặt "isTopPick": false.
+5. Tiêu đề 5 [Bền vững xuyên thời gian - Evergreen]: Bản chất vấn đề, giữ lượt xem trường tồn theo năm tháng. Đặt "isTopPick": false.
+
+VIRAL SCORE (88 - 99): Chấm điểm tiềm năng CTR ước tính cho từng tiêu đề theo thang 100.
+PHÂN LOẠI THỜI ĐIỂM ("timing"): "Trending Hot" (thời sự bùng nổ) hoặc "Evergreen" (bền vững).
+
+ĐỊNH DẠNG ĐẦU RA (OUTPUT FORMAT):
+BẮT BUỘC trả về đúng định dạng mảng JSON thuần túy gồm ĐÚNG 5 PHẦN TỬ (không viết văn xuôi hay chào hỏi ngoài JSON):
+[
+  {
+    "angle": "Tò mò tột độ",
+    "title": "Tiêu đề số 1...",
+    "viralScore": 98,
+    "timing": "Trending Hot",
+    "isTopPick": true,
+    "pickReason": "Khoảng trống thông tin kích thích người xem click ngay trong 3 giây đầu."
+  },
+  {
+    "angle": "Nghịch lý & Xung đột",
+    "title": "Tiêu đề số 2...",
+    "viralScore": 95,
+    "timing": "Evergreen",
+    "isTopPick": false
+  },
+  {
+    "angle": "Con số & Bằng chứng",
+    "title": "Tiêu đề số 3...",
+    "viralScore": 93,
+    "timing": "Evergreen",
+    "isTopPick": false
+  },
+  {
+    "angle": "Cảnh báo / Chống số đông",
+    "title": "Tiêu đề số 4...",
+    "viralScore": 91,
+    "timing": "Trending Hot",
+    "isTopPick": false
+  },
+  {
+    "angle": "Bền vững xuyên thời gian",
+    "title": "Tiêu đề số 5...",
+    "viralScore": 89,
+    "timing": "Evergreen",
+    "isTopPick": false
+  }
+]`;
+
+  const userPrompt = `Thời điểm hiện tại: ${dateStr}. Tiêu đề gốc / Chủ đề video: "${rawInput}".
+Hãy phân tích tâm lý người xem và tạo đúng 5 TIÊU ĐỀ YOUTUBE TINH HOA NHẤT bằng ${targetLangObj.name} theo đúng định dạng JSON yêu cầu. Chọn ra đúng 1 tiêu đề "isTopPick": true với "pickReason".`;
+
+  setTitleGeneratingUIState(true);
+  state.titleState.abortController = new AbortController();
+
+  if (DOM.titleOutputStatusDesc) {
+    DOM.titleOutputStatusDesc.textContent = `Đang phân tích tâm lý người xem (${targetLangObj.name})...`;
+  }
+
+  try {
+    const baseUrl = resolveBaseUrl(provider);
+    const endpoint = `${baseUrl}/chat/completions`;
+
+    let rawText = '';
+
+    for (let mIdx = 0; mIdx < candidateModels.length; mIdx++) {
+      const currentModel = candidateModels[mIdx];
+      if (state.titleState.abortController?.signal?.aborted) break;
+
+      state.settings.activeModelId = currentModel;
+      updateHeaderActiveModel();
+
+      if (DOM.titleLoadingText) {
+        DOM.titleLoadingText.textContent = mIdx > 0
+          ? `🔄 Chuyển sang ${currentModel}: Đang tạo 10 tiêu đề tối ưu...`
+          : `Đang kết nối ${currentModel} & bóc tách tâm lý YouTube...`;
+      }
+
+      const payload = {
+        model: currentModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        temperature: 0.75,
+        stream: false
+      };
+
+      let response;
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${provider.apiKey}`
+          },
+          body: JSON.stringify(payload),
+          signal: state.titleState.abortController.signal
+        });
+      } catch (fetchErr) {
+        if (fetchErr.name === 'AbortError') throw fetchErr;
+        if (mIdx < candidateModels.length - 1) {
+          await new Promise(r => setTimeout(r, 400));
+          continue;
+        }
+        throw fetchErr;
+      }
+
+      if (!response.ok) {
+        let errDetails = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errJson = await response.json();
+          if (errJson.error && errJson.error.message) {
+            errDetails = errJson.error.message;
+          }
+        } catch (e) {}
+
+        if (response.status === 401 || (response.status === 403 && !errDetails.toLowerCase().includes('quota'))) {
+          throw new Error(`API Key không hợp lệ hoặc bị từ chối (${errDetails}).`);
+        }
+
+        const isRecoverable = (response.status === 429 || response.status === 503 || response.status === 502 || response.status === 504 || response.status === 404)
+          || /quota|rate.?limit|resource_exhausted|overloaded|capacity|tokens|exhausted/i.test(errDetails);
+
+        if (isRecoverable && mIdx < candidateModels.length - 1) {
+          console.warn(`Model ${currentModel} gặp lỗi (${errDetails}), xoay vòng model...`);
+          await new Promise(r => setTimeout(r, 400));
+          continue;
+        } else {
+          throw new Error(errDetails);
+        }
+      }
+
+      const data = await response.json();
+      rawText = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+      break;
+    }
+
+    if (!rawText) {
+      throw new Error('Máy chủ AI không trả về dữ liệu!');
+    }
+
+    // Parse titles from JSON or robust fallback
+    const parsedTitles = parseTitlesFromResponse(rawText);
+
+    if (!parsedTitles || parsedTitles.length === 0) {
+      throw new Error('Không thể phân tích định dạng tiêu đề từ AI!');
+    }
+
+    state.titleState.titles = parsedTitles;
+    renderTitleResults(parsedTitles);
+
+    if (DOM.titleOutputStatusDesc) {
+      DOM.titleOutputStatusDesc.textContent = `Đã tạo 5 tiêu đề tinh hoa theo chuẩn CTR (${targetLangObj.name})`;
+    }
+
+    if (DOM.btnCopyAllTitles) DOM.btnCopyAllTitles.disabled = false;
+    if (DOM.btnRegenerateTitles) DOM.btnRegenerateTitles.disabled = false;
+
+    showToast(`Đã tạo thành công ${parsedTitles.length} tiêu đề tinh hoa!`, 'success');
+
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.log('Title generation aborted by user.');
+    } else {
+      console.error('Title generation failed:', err);
+      showToast(`Lỗi tạo tiêu đề: ${err.message}`, 'danger', 3500);
+      if (DOM.titleOutputStatusDesc) {
+        DOM.titleOutputStatusDesc.textContent = `Lỗi: ${err.message}`;
+      }
+      if (!state.titleState.titles || state.titleState.titles.length === 0) {
+        if (DOM.titleEmptyState) DOM.titleEmptyState.classList.remove('hidden');
+      }
+    }
+  } finally {
+    setTitleGeneratingUIState(false);
+    state.titleState.abortController = null;
+  }
+}
+
+function parseTitlesFromResponse(rawText) {
+  let cleanText = rawText.trim();
+
+  // Try extracting JSON from markdown code block ```json ... ```
+  const jsonMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (jsonMatch && jsonMatch[1]) {
+    cleanText = jsonMatch[1].trim();
+  }
+
+  // Attempt 1: Standard JSON parse
+  try {
+    const parsed = JSON.parse(cleanText);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      let hasTopPick = false;
+      const list = parsed.map((item, idx) => {
+        if (typeof item === 'string') {
+          return {
+            angle: 'Tối ưu CTR',
+            title: cleanTitleString(item),
+            viralScore: Math.max(88, 98 - Math.min(idx * 2, 10)),
+            timing: idx % 2 === 0 ? 'Trending Hot' : 'Evergreen',
+            isTopPick: idx === 0,
+            pickReason: idx === 0 ? 'Đánh trúng khoảng trống tò mò lớn nhất và kích thích nhấp chuột mạnh mẽ.' : ''
+          };
+        }
+
+        const isTop = Boolean(item.isTopPick);
+        if (isTop) hasTopPick = true;
+
+        let score = parseInt(item.viralScore, 10);
+        if (isNaN(score) || score < 50 || score > 100) {
+          score = Math.max(88, 98 - Math.min(idx, 9));
+        }
+
+        let timing = item.timing;
+        if (timing !== 'Trending Hot' && timing !== 'Evergreen') {
+          timing = idx % 2 === 0 ? 'Trending Hot' : 'Evergreen';
+        }
+
+        return {
+          angle: item.angle || item.type || item.style || 'Tối ưu CTR',
+          title: cleanTitleString(item.title || item.text || item.content || ''),
+          viralScore: score,
+          timing: timing,
+          isTopPick: isTop,
+          pickReason: item.pickReason || ''
+        };
+      }).filter(t => Boolean(t.title));
+
+      if (!hasTopPick && list.length > 0) {
+        list[0].isTopPick = true;
+        if (!list[0].pickReason) {
+          list[0].pickReason = 'Đánh trúng khoảng trống tò mò lớn nhất và kích thích nhấp chuột mạnh mẽ.';
+        }
+      }
+
+      return list.slice(0, 5);
+    }
+  } catch (e) {
+    // Proceed to fallback
+  }
+
+  // Attempt 2: Regex Fallback - match numbered lines like:
+  // 1. [Tò mò] Tiêu đề...
+  // 1. "Tiêu đề..."
+  // 1. Tiêu đề...
+  const fallbackList = [];
+  const lines = rawText.split('\n');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Pattern: 1. [Angle] Title or 1. Title
+    const match = trimmed.match(/^(\d+)[\.\-\)]\s*(?:\[([^\]]+)\])?\s*(.*)$/);
+    if (match) {
+      const angle = match[2] ? match[2].trim() : 'Tối ưu CTR';
+      const title = cleanTitleString(match[3]);
+      if (title) {
+        const idx = fallbackList.length;
+        fallbackList.push({
+          angle,
+          title,
+          viralScore: Math.max(88, 98 - idx * 2),
+          timing: idx % 2 === 0 ? 'Trending Hot' : 'Evergreen',
+          isTopPick: idx === 0,
+          pickReason: idx === 0 ? 'Đánh trúng khoảng trống tò mò lớn nhất và kích thích nhấp chuột mạnh mẽ.' : ''
+        });
+      }
+    }
+  }
+
+  if (fallbackList.length > 0) {
+    return fallbackList.slice(0, 5);
+  }
+
+  // Attempt 3: Any non-empty lines
+  const rawLines = lines
+    .map(l => cleanTitleString(l))
+    .filter(l => l && l.length > 10 && !l.startsWith('{') && !l.startsWith('[') && !l.startsWith('`'));
+
+  return rawLines.slice(0, 5).map((t, idx) => ({
+    angle: 'Tối ưu CTR',
+    title: t,
+    viralScore: Math.max(88, 98 - idx * 2),
+    timing: idx % 2 === 0 ? 'Trending Hot' : 'Evergreen',
+    isTopPick: idx === 0,
+    pickReason: idx === 0 ? 'Đánh trúng khoảng trống tò mò lớn nhất và kích thích nhấp chuột mạnh mẽ.' : ''
+  }));
+}
+
+function cleanTitleString(str) {
+  if (!str) return '';
+  return str
+    .replace(/^["'“”«»]+|["'“”«»]+$/g, '')
+    .replace(/^\d+[\.\-\)]\s*/, '')
+    .trim();
+}
+
+function renderTitleResults(titles) {
+  if (!DOM.titleResultsList) return;
+
+  DOM.titleResultsList.innerHTML = '';
+
+  titles.forEach((item, index) => {
+    const card = document.createElement('div');
+    card.className = 'title-card-item' + (item.isTopPick ? ' is-top-pick' : '');
+
+    const num = index + 1;
+    const titleText = item.title;
+    const charLen = titleText.length;
+    const score = item.viralScore || Math.max(88, 98 - index);
+    const timing = item.timing || (index % 2 === 0 ? 'Trending Hot' : 'Evergreen');
+
+    // Safe-zone badge calculation
+    let safeClass = 'green';
+    let safeLabel = `${charLen} KT • Chuẩn Mobile`;
+    if (charLen > 70) {
+      safeClass = 'red';
+      safeLabel = `${charLen} KT • Dài`;
+    } else if (charLen > 60) {
+      safeClass = 'yellow';
+      safeLabel = `${charLen} KT • Vừa vặn`;
+    }
+
+    // Score badge class
+    let scoreClass = 'high';
+    if (score < 90) scoreClass = 'good';
+    else if (score < 95) scoreClass = 'medium';
+
+    // Timing label
+    const timingClass = timing === 'Trending Hot' ? 'trending' : 'evergreen';
+    const timingLabel = timing === 'Trending Hot' ? '⚡ Bắt Trend' : '🌱 Bền Vững';
+
+    // Card Header
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'title-card-header';
+
+    const cardMeta = document.createElement('div');
+    cardMeta.className = 'title-card-meta';
+
+    if (item.isTopPick) {
+      const topBadge = document.createElement('span');
+      topBadge.className = 'title-top-pick-badge';
+      topBadge.innerHTML = '<span>👑</span> TOP 1 ĐỀ XUẤT VIRAL';
+      cardMeta.appendChild(topBadge);
+    }
+
+    const numBadge = document.createElement('span');
+    numBadge.className = 'title-num-badge';
+    numBadge.textContent = `#${num}`;
+    cardMeta.appendChild(numBadge);
+
+    const angleBadge = document.createElement('span');
+    angleBadge.className = 'title-angle-badge';
+    angleBadge.textContent = item.angle || 'Tối ưu CTR';
+    cardMeta.appendChild(angleBadge);
+
+    const scoreBadge = document.createElement('span');
+    scoreBadge.className = `title-score-badge ${scoreClass}`;
+    scoreBadge.textContent = `⭐ ${score}/100 CTR`;
+    cardMeta.appendChild(scoreBadge);
+
+    const timingBadge = document.createElement('span');
+    timingBadge.className = `title-timing-badge ${timingClass}`;
+    timingBadge.textContent = timingLabel;
+    cardMeta.appendChild(timingBadge);
+
+    const safeBadge = document.createElement('span');
+    safeBadge.className = `title-safe-badge ${safeClass}`;
+    safeBadge.textContent = safeLabel;
+
+    cardHeader.appendChild(cardMeta);
+    cardHeader.appendChild(safeBadge);
+
+    // Card Body
+    const cardBody = document.createElement('div');
+    cardBody.className = 'title-card-body';
+
+    const textWrap = document.createElement('div');
+    textWrap.style.flex = '1';
+    textWrap.style.minWidth = '0';
+
+    const textP = document.createElement('p');
+    textP.className = 'title-text-content';
+    textP.textContent = titleText;
+    textWrap.appendChild(textP);
+
+    if (item.isTopPick && item.pickReason) {
+      const reasonBox = document.createElement('div');
+      reasonBox.className = 'title-pick-reason';
+      reasonBox.innerHTML = `
+        <span class="reason-icon">💡</span>
+        <span><strong>Lý do chọn #1:</strong> ${item.pickReason}</span>
+      `;
+      textWrap.appendChild(reasonBox);
+    }
+
+    const copyBtn = document.createElement('button');
+    copyBtn.type = 'button';
+    copyBtn.className = 'btn-copy-single-title';
+    copyBtn.title = 'Sao chép tiêu đề này';
+    copyBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+      </svg>
+      <span>Sao chép</span>
+    `;
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await (navigator.clipboard?.writeText ? navigator.clipboard.writeText(titleText) : null);
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = `
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>Đã chép!</span>
+        `;
+        showToast(`Đã sao chép tiêu đề #${num}!`, 'success', 1000);
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Sao chép</span>
+          `;
+        }, 1600);
+      } catch (e) {
+        showToast('Không thể sao chép!', 'danger', 1200);
+      }
+    });
+
+    cardBody.appendChild(textWrap);
+    cardBody.appendChild(copyBtn);
+
+    card.appendChild(cardHeader);
+    card.appendChild(cardBody);
+
+    DOM.titleResultsList.appendChild(card);
+  });
+
+  if (DOM.titleEmptyState) DOM.titleEmptyState.classList.add('hidden');
+  if (DOM.titleLoadingState) DOM.titleLoadingState.classList.add('hidden');
+  if (DOM.titleResultsList) DOM.titleResultsList.classList.remove('hidden');
+
+  if (DOM.titleCountPill) {
+    DOM.titleCountPill.textContent = `${titles.length} / 5 tiêu đề`;
+  }
+  if (DOM.titleCountStat) {
+    DOM.titleCountStat.textContent = `${titles.length} tiêu đề`;
+  }
+  if (DOM.titleStatusText) DOM.titleStatusText.textContent = 'Hoàn tất';
+  if (DOM.titleStatusBadge) DOM.titleStatusBadge.className = 'output-status-pill completed';
+  if (DOM.btnCopyAllTitles) DOM.btnCopyAllTitles.disabled = false;
+  if (DOM.btnRegenerateTitles) DOM.btnRegenerateTitles.disabled = false;
+}
+
+async function copyAllTitlesToClipboard() {
+  if (!state.titleState.titles || state.titleState.titles.length === 0) {
+    showToast('Chưa có danh sách tiêu đề để sao chép!', 'warning');
+    return;
+  }
+
+  const formatted = state.titleState.titles
+    .map((item, idx) => {
+      const topMark = item.isTopPick ? ' [👑 TOP 1 ĐỀ XUẤT]' : '';
+      const scoreMark = item.viralScore ? ` (CTR: ${item.viralScore}/100)` : '';
+      return `${idx + 1}.${topMark} [${item.angle}] ${item.title}${scoreMark}`;
+    })
+    .join('\n');
+
+  try {
+    await navigator.clipboard.writeText(formatted);
+    showToast('Đã sao chép toàn bộ danh sách 5 tiêu đề vào Clipboard!', 'success', 2000);
+  } catch (err) {
+    showToast('Lỗi khi sao chép toàn bộ!', 'danger', 1500);
+  }
+}
+
 // Start Application
 window.addEventListener('DOMContentLoaded', initApp);
+

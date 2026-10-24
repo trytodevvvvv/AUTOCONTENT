@@ -4,9 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AutoContent Studio - AI Scriptwriter</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="fonts.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,76 +19,132 @@
       </div>
     </div>
 
-    <!-- Top Navigation Bar -->
-    <header class="app-header">
-      <div class="header-left">
-        <div class="logo-group">
-          <div class="logo-icon-wrap">
-            <img src="../assets/icon.png" alt="AutoContent AI" class="logo-app-img">
-          </div>
-          <div class="logo-text">
-            <span class="logo-title">AutoContent<span class="logo-badge">PRO</span></span>
-            <span class="logo-sub">AI Scriptwriter & YouTube Content Studio</span>
-          </div>
-        </div>
-      </div>
+    <!-- Body Layout Container: Left Sidebar + Stage Wrapper -->
+    <div class="app-layout-container">
+      <!-- LEFT NAVIGATION SIDEBAR (Studio Multi-Module Hub) -->
+      <aside class="app-sidebar" id="appSidebar">
+        <!-- Top Navigation Modules -->
+        <div class="sidebar-modules-top">
+          <!-- Module 1: Kịch bản (Active) -->
+          <button class="sidebar-nav-btn active" id="btnNavScript" title="Viết kịch bản YouTube AI" type="button">
+            <div class="sidebar-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+            </div>
+            <span class="sidebar-label">Kịch bản</span>
+          </button>
 
-      <div class="header-center">
-        <!-- Active Model Pill -->
-        <div class="active-model-pill" id="btnOpenModelPicker" title="Nhấn để đổi nhanh API hoặc Model" tabindex="0">
-          <span class="status-indicator-dot offline" id="headerStatusDot"></span>
-          <span class="pill-provider" id="headerProviderName">Chưa chọn API</span>
-          <span class="pill-divider">/</span>
-          <span class="pill-model" id="headerModelName">Chưa có model</span>
-          <svg class="pill-chevron" id="pillChevron" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-          </svg>
+          <!-- Module 2: Tiêu đề (Viral Title AI) -->
+          <button class="sidebar-nav-btn" id="btnNavTitle" title="Tối ưu tiêu đề YouTube Viral" type="button">
+            <div class="sidebar-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+            </div>
+            <span class="sidebar-label">Tiêu đề</span>
+          </button>
         </div>
 
-        <!-- Quick Switcher Dropdown Popover -->
-        <div class="quick-api-menu hidden" id="quickApiMenu">
-          <div class="quick-menu-header">
-            <span class="quick-menu-title">DANH SÁCH API & MODEL</span>
-            <span class="quick-menu-subtitle">Bấm để chuyển đổi tức thì</span>
-          </div>
-          <div class="quick-menu-list" id="quickMenuList">
-            <!-- Dynamic provider and model items -->
-          </div>
-          <div class="quick-menu-footer">
-            <button class="quick-menu-btn-manage" id="btnQuickManageApis" type="button">
+        <!-- Bottom Navigation Utilities -->
+        <div class="sidebar-modules-bottom">
+          <!-- Nút Cài đặt -->
+          <button class="sidebar-nav-btn" id="btnNavSettings" title="Cài đặt hệ thống & Quản lý API Key" type="button">
+            <div class="sidebar-icon-wrap">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="3"></circle>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
               </svg>
-              <span>Cài đặt & Quản lý API Key...</span>
-            </button>
+              <span class="sidebar-update-dot hidden" id="sidebarUpdateDot"></span>
+            </div>
+            <span class="sidebar-label">Cài đặt</span>
+          </button>
+
+          <!-- Status Indicator Dot -->
+          <div class="sidebar-status-container" title="Trạng thái kết nối API">
+            <span class="status-indicator-dot offline" id="sidebarStatusDot"></span>
           </div>
         </div>
-      </div>
+      </aside>
 
-      <div class="header-right">
-        <button class="nav-btn" id="btnOpenSettings" title="Cấu hình danh sách API & Models">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-            <line x1="6" y1="6" x2="6.01" y2="6"></line>
-            <line x1="6" y1="18" x2="6.01" y2="18"></line>
-          </svg>
-          <span>Cấu hình API</span>
-        </button>
-        <button class="nav-btn nav-btn-settings" id="btnOpenGeneralSettings" title="Cài đặt ứng dụng & hiển thị">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-          <span>Cài đặt</span>
-          <span class="update-badge-dot hidden" id="headerUpdateBadgeDot" title="Có bản cập nhật mới!"></span>
-        </button>
-      </div>
-    </header>
+      <!-- RIGHT CONTENT STAGE -->
+      <div class="app-stage-wrapper">
+        <!-- Top Navigation Bar -->
+        <header class="app-header">
+          <div class="header-left">
+            <div class="logo-group">
+              <div class="logo-icon-wrap">
+                <img src="../assets/icon.png" alt="AutoContent AI" class="logo-app-img">
+              </div>
+              <div class="logo-text">
+                <span class="logo-title">AutoContent<span class="logo-badge">PRO</span></span>
+                <span class="logo-sub" id="headerSubtitleText">AI Scriptwriter & YouTube Content Studio</span>
+              </div>
+            </div>
+          </div>
 
-    <!-- Main Workspace Two-Column Layout -->
-    <main class="app-workspace">
+          <div class="header-center">
+            <!-- Active Model Pill -->
+            <div class="active-model-pill" id="btnOpenModelPicker" title="Nhấn để đổi nhanh API hoặc Model" tabindex="0">
+              <span class="status-indicator-dot offline" id="headerStatusDot"></span>
+              <span class="pill-provider" id="headerProviderName">Chưa chọn API</span>
+              <span class="pill-divider">/</span>
+              <span class="pill-model" id="headerModelName">Chưa có model</span>
+              <svg class="pill-chevron" id="pillChevron" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </div>
+
+            <!-- Quick Switcher Dropdown Popover -->
+            <div class="quick-api-menu hidden" id="quickApiMenu">
+              <div class="quick-menu-header">
+                <span class="quick-menu-title">DANH SÁCH API & MODEL</span>
+                <span class="quick-menu-subtitle">Bấm để chuyển đổi tức thì</span>
+              </div>
+              <div class="quick-menu-list" id="quickMenuList">
+                <!-- Dynamic provider and model items -->
+              </div>
+              <div class="quick-menu-footer">
+                <button class="quick-menu-btn-manage" id="btnQuickManageApis" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                  <span>Cài đặt & Quản lý API Key...</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="header-right">
+            <button class="nav-btn" id="btnOpenSettings" title="Cấu hình danh sách API & Models">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+                <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+                <line x1="6" y1="6" x2="6.01" y2="6"></line>
+                <line x1="6" y1="18" x2="6.01" y2="18"></line>
+              </svg>
+              <span>Quản lý API</span>
+            </button>
+            <button class="nav-btn nav-btn-settings" id="btnOpenGeneralSettings" title="Cài đặt ứng dụng & hiển thị">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+              <span>Cài đặt</span>
+              <span class="update-badge-dot hidden" id="headerUpdateBadgeDot" title="Có bản cập nhật mới!"></span>
+            </button>
+          </div>
+        </header>
+
+        <!-- VIEW 1: KỊCH BẢN AI (MẶC ĐỊNH) -->
+        <div class="stage-view active" id="viewScriptwriter">
+          <!-- Main Workspace Two-Column Layout -->
+          <main class="app-workspace">
       <!-- LEFT COLUMN: INPUT & CREATIVE CONTROLS -->
       <section class="panel panel-input">
         <div class="panel-header">
@@ -297,28 +351,8 @@
 
         <!-- Main Output Content Area -->
         <div class="output-scroll-container" id="outputContainer">
-          <!-- Empty State -->
-          <div class="empty-state" id="emptyState">
-            <div class="empty-illustration">
-              <div class="empty-circle-glow"></div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="empty-icon">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="16" y1="13" x2="8" y2="13"></line>
-                <line x1="16" y1="17" x2="8" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-              </svg>
-            </div>
-            <h3 class="empty-title">Chưa có kịch bản nào được tạo</h3>
-            <p class="empty-text">
-              Dán nội dung bài viết vào ô bên trái, tích chọn các tính năng theo nhu cầu và nhấn nút <strong>"Tạo Kịch Bản Tự Động"</strong>.
-            </p>
-            <div class="feature-hints">
-              <div class="hint-pill">✨ Tự viết Hook 3s cuốn hút</div>
-              <div class="hint-pill">🎬 Chia cảnh Visual / Voiceover</div>
-              <div class="hint-pill">🌍 Đa ngôn ngữ bản địa hóa</div>
-            </div>
-          </div>
+          <!-- Empty State (Để trống hoàn toàn khi mới mở ứng dụng) -->
+          <div class="empty-state hidden" id="emptyState"></div>
 
           <!-- Rendered Script Content -->
           <div class="script-content-display hidden" id="scriptContent"></div>
@@ -363,338 +397,714 @@
       </section>
     </main>
 
-    <!-- SETTINGS MODAL (Accurate to User's Screenshot) -->
-    <div class="modal-overlay hidden" id="settingsModal">
-      <div class="modal-window">
-        <!-- Modal Top Bar -->
-        <div class="modal-header">
-          <div class="provider-badge-group">
-            <span class="provider-current-title" id="modalProviderTitle">Cấu hình API</span>
-            <span class="badge-custom">Custom</span>
-            <span class="status-indicator-dot offline" id="modalHeaderStatusDot" title="Trạng thái kết nối API"></span>
-          </div>
-          <div class="modal-header-actions">
-            <button class="btn-add-provider-header" id="btnAddNewProviderHeader" title="Thêm cấu hình API mới" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
-              <span>Thêm API Mới</span>
-            </button>
-            <button class="btn-delete-provider-box" id="btnDeleteProvider" title="Xóa cấu hình API này" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-              <span>Xóa API</span>
-            </button>
-            <button class="btn-close" id="btnCloseModal" title="Đóng">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
+        </div> <!-- /#viewScriptwriter -->
+
+        <!-- VIEW 2: TỐI ƯU TIÊU ĐỀ YOUTUBE VIRAL (DEEP FOCUS) -->
+        <div class="stage-view hidden" id="viewTitleGenerator">
+          <main class="app-workspace title-workspace">
+            <!-- LEFT COLUMN: ĐẦU VÀO TINH GỌN (CHỈ TIÊU ĐỀ GỐC + 8 NGÔN NGỮ) -->
+            <section class="panel panel-input title-panel-input">
+              <div class="panel-header">
+                <div class="panel-title-wrap">
+                  <span class="step-num">1</span>
+                  <div class="panel-title-text">
+                    <h2 class="panel-title">Tiêu đề gốc (Original Title)</h2>
+                    <p class="panel-desc" title="Chỉ cần nhập 1 tiêu đề gốc để AI tối ưu tỷ lệ click">Nhập 1 tiêu đề gốc để AI tối ưu tỷ lệ click (CTR)</p>
+                  </div>
+                </div>
+                <div class="panel-actions">
+                  <button class="btn-text" id="btnSampleTitle" title="Điền tiêu đề mẫu hay để thử" type="button">Mẫu thử</button>
+                  <button class="btn-text" id="btnPasteTitle" title="Dán nhanh từ Clipboard" type="button">Dán</button>
+                  <button class="btn-text danger" id="btnClearTitle" title="Xóa ô nhập" type="button">Xóa</button>
+                </div>
+              </div>
+
+              <!-- BODY SCROLLABLE / CONTENT AREA -->
+              <div class="title-panel-body">
+                <!-- Ô NHẬP DUY NHẤT (CARD TÍCH HỢP ĐẾM KÝ TỰ) -->
+                <div class="title-input-card">
+                  <textarea 
+                    id="inputOriginalTitle" 
+                    class="title-input-box" 
+                    placeholder="Nhập hoặc dán tiêu đề video gốc / chủ đề chính tại đây...&#10;(Ví dụ: Tại sao người ta lại sợ mua xe điện?)"
+                    rows="3"
+                    spellcheck="false"
+                  ></textarea>
+                  <div class="title-input-footer">
+                    <div class="title-counts-group">
+                      <span id="titleCharCount">0 ký tự</span>
+                      <span class="dot-separator">•</span>
+                      <span id="titleWordCount">0 từ</span>
+                    </div>
+                    <span class="title-input-hint">Độ dài lý tưởng: 5 – 15 từ</span>
+                  </div>
+                </div>
+
+                <!-- LỰA CHỌN 8 NGÔN NGỮ ĐÍCH -->
+                <div class="options-container title-options-container">
+                  <div class="options-title-row title-lang-title-row">
+                    <div class="options-title-left">
+                      <span class="step-num small">2</span>
+                      <span class="options-heading title-gradient-heading">NGÔN NGỮ MỤC TIÊU (TARGET LANGUAGE)</span>
+                    </div>
+                  </div>
+                  <div class="title-lang-grid" id="titleLangGrid">
+                    <button type="button" class="title-lang-pill active" data-lang="vi" data-label="🇻🇳 Tiếng Việt">
+                      <span class="lang-tag">VN</span>
+                      <span class="lang-name">Tiếng Việt</span>
+                    </button>
+                    <button type="button" class="title-lang-pill" data-lang="en" data-label="🇺🇸 English">
+                      <span class="lang-tag">EN</span>
+                      <span class="lang-name">English</span>
+                    </button>
+                    <button type="button" class="title-lang-pill" data-lang="zh" data-label="🇨🇳 Tiếng Trung (中文)">
+                      <span class="lang-tag">CN</span>
+                      <span class="lang-name">中文 (Trung)</span>
+                    </button>
+                    <button type="button" class="title-lang-pill" data-lang="ja" data-label="🇯🇵 Tiếng Nhật (日本語)">
+                      <span class="lang-tag">JP</span>
+                      <span class="lang-name">日本語 (Nhật)</span>
+                    </button>
+                    <button type="button" class="title-lang-pill" data-lang="ko" data-label="🇰🇷 Tiếng Hàn (한국어)">
+                      <span class="lang-tag">KR</span>
+                      <span class="lang-name">한국어 (Hàn)</span>
+                    </button>
+                    <button type="button" class="title-lang-pill" data-lang="es" data-label="🇪🇸 Tây Ban Nha (Español)">
+                      <span class="lang-tag">ES</span>
+                      <span class="lang-name">Español</span>
+                    </button>
+                    <button type="button" class="title-lang-pill" data-lang="pt" data-label="🇵🇹 Bồ Đào Nha (Português EU)">
+                      <span class="lang-tag">PT</span>
+                      <span class="lang-name">Português</span>
+                    </button>
+                    <button type="button" class="title-lang-pill" data-lang="br" data-label="🇧🇷 Brazil (Português BR)">
+                      <span class="lang-tag">BR</span>
+                      <span class="lang-name">Brasil (BR)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- KHUNG THÔNG TIN: 4 CHIỀU SÂU BÓC TÁCH CTR AI -->
+                <div class="title-framework-card">
+                  <div class="framework-card-header">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="framework-icon">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                    </svg>
+                    <span class="framework-title">4 Chiều Sâu Bóc Tách Tâm Lý Người Xem:</span>
+                  </div>
+                  <div class="framework-grid">
+                    <div class="framework-item">
+                      <span class="framework-badge orange">Tò mò</span>
+                      <span class="framework-text">Tạo khoảng trống thông tin kích thích não bộ (Curiosity Gap)</span>
+                    </div>
+                    <div class="framework-item">
+                      <span class="framework-badge purple">Nghịch lý</span>
+                      <span class="framework-text">Đặt 2 sự thật đối nghịch nhau khơi gợi tranh luận (Paradox)</span>
+                    </div>
+                    <div class="framework-item">
+                      <span class="framework-badge blue">Số liệu</span>
+                      <span class="framework-text">Dùng con số cụ thể & mốc thời gian tăng uy tín (Proof)</span>
+                    </div>
+                    <div class="framework-item">
+                      <span class="framework-badge green">Góc nhìn</span>
+                      <span class="framework-text">Phản biện lại quan niệm thông thường của số đông (Contrarian)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- CHÂN PANEL CỐ ĐỊNH SÁT ĐÁY BOX (PANEL FOOTER ACTION) -->
+              <div class="panel-footer-action title-panel-footer">
+                <button class="btn-gradient-hero title-generate-hero-btn" id="btnGenerateTitles" type="button">
+                  <span class="btn-hero-glow"></span>
+                  <span class="btn-hero-content">
+                    <svg class="btn-hero-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                    <span id="btnGenerateTitlesText">TẠO 5 TIÊU ĐỀ TINH HOA ĐỘT PHÁ</span>
+                  </span>
+                </button>
+                <div class="title-ctr-tip">
+                  <span class="tip-bulb">💡</span>
+                  <span><strong>Mẹo CTR:</strong> Tiêu đề ≤ 60 ký tự hiển thị trọn vẹn 100% trên app điện thoại.</span>
+                </div>
+              </div>
+            </section>
+
+            <!-- RIGHT COLUMN: KẾT QUẢ 5 TIÊU ĐỀ TINH HOA -->
+            <section class="panel panel-output title-panel-output">
+              <div class="panel-header">
+                <div class="panel-title-wrap">
+                  <span class="step-num">3</span>
+                  <div class="panel-title-text">
+                    <h2 class="panel-title">5 Tiêu Đề Tinh Hoa Đột Phá</h2>
+                    <p class="panel-desc" id="titleOutputStatusDesc">5 vũ khí tâm lý bóc tách CTR theo chiều sâu</p>
+                  </div>
+                </div>
+                <div class="output-status-pill" id="titleStatusBadge">
+                  <span class="pulse-dot"></span>
+                  <span id="titleStatusText">Sẵn sàng</span>
+                </div>
+              </div>
+
+              <!-- Metadata Stat Bar for Title Generator -->
+              <div class="output-meta-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Số lượng:</span>
+                  <span class="stat-value highlight" id="titleCountStat">5 tiêu đề</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                  <span class="stat-label">Độ dài:</span>
+                  <span class="stat-value">40 – 65 ký tự</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                  <span class="stat-label">Ngôn ngữ:</span>
+                  <span class="stat-value" id="titleMetaLang">Tiếng Việt</span>
+                </div>
+              </div>
+
+              <!-- KHU VỰC HIỂN THỊ KẾT QUẢ -->
+              <div class="title-output-body" id="titleOutputBody">
+                <!-- Empty State (Để trống hoàn toàn khi mới mở ứng dụng) -->
+                <div class="title-empty-state hidden" id="titleEmptyState"></div>
+
+                <!-- Loading State -->
+                <div class="title-loading-state hidden" id="titleLoadingState">
+                  <div class="title-loading-header">
+                    <div class="spinner-sm"></div>
+                    <span id="titleLoadingText">Đang bóc tách tâm lý người xem & tạo 5 tiêu đề tinh hoa...</span>
+                  </div>
+                  <div class="title-skeleton-list">
+                    <div class="title-skeleton-card"></div>
+                    <div class="title-skeleton-card"></div>
+                    <div class="title-skeleton-card"></div>
+                    <div class="title-skeleton-card"></div>
+                  </div>
+                </div>
+
+                <!-- Results List Container -->
+                <div class="title-results-list hidden" id="titleResultsList">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+
+              <!-- Output Action Footer Bar for Title Generator -->
+              <div class="output-action-bar">
+                <div class="action-bar-left">
+                  <button class="btn-action primary" id="btnCopyAllTitles" title="Sao chép toàn bộ danh sách tiêu đề" type="button" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                    </svg>
+                    <span>Sao chép tất cả</span>
+                  </button>
+                </div>
+                <div class="action-bar-right">
+                  <button class="btn-action ghost" id="btnRegenerateTitles" title="Tạo lại lượt mới" type="button" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="23 4 23 10 17 10"></polyline>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    <span>Tạo lại</span>
+                  </button>
+                  <span class="title-count-pill" id="titleCountPill">0 / 5 tiêu đề</span>
+                </div>
+              </div>
+            </section>
+          </main>
         </div>
 
-        <!-- Modal Body Content -->
-        <div class="modal-body">
-          <!-- Provider Tab Switcher -->
-          <div class="provider-tabs-row" id="providerTabs">
-            <!-- Rendered dynamically -->
-          </div>
-
-          <!-- Provider Connection Type Selector (Cách 1 & Cách 2) -->
-          <div class="provider-type-block">
-            <label class="provider-type-label">Phương thức kết nối API:</label>
-            <div class="provider-type-grid">
-              <!-- Cách 1: OpenAI / Custom -->
-              <label class="provider-type-card active" id="cardTypeOpenAI">
-                <input type="radio" name="providerType" value="openai" id="radioTypeOpenAI" checked>
-                <div class="type-card-radio-circle"></div>
-                <div class="type-card-content">
-                  <div class="type-card-header">
-                    <span class="type-card-title">Cách 1: Chuẩn OpenAI / Custom</span>
-                    <span class="type-badge-pill">Base URL + Key</span>
-                  </div>
-                  <p class="type-card-desc">Dành cho Vilao AI, DeepSeek, OpenRouter, Groq hoặc máy chủ tương thích OpenAI.</p>
+        <!-- VIEW 3: TRUNG TÂM CÀI ĐẶT HỆ THỐNG (FULL VIEW) -->
+        <div class="stage-view hidden" id="viewSettings">
+          <div class="settings-view-container">
+            <!-- Settings Header Bar -->
+            <div class="settings-view-header">
+              <div class="settings-header-left">
+                <div class="settings-badge-row">
+                  <span class="badge-custom">System Settings</span>
+                  <span class="settings-path">Hệ thống &rsaquo; Cài đặt trung tâm</span>
                 </div>
-              </label>
-
-              <!-- Cách 2: Chỉ cần API Key -->
-              <label class="provider-type-card" id="cardTypeGemini">
-                <input type="radio" name="providerType" value="gemini" id="radioTypeGemini">
-                <div class="type-card-radio-circle"></div>
-                <div class="type-card-content">
-                  <div class="type-card-header">
-                    <span class="type-card-title">Cách 2: Chỉ cần API Key</span>
-                    <span class="type-badge-pill gemini">Chỉ cần API Key</span>
-                  </div>
-                  <p class="type-card-desc">Dành cho Google Gemini, OpenAI, Groq, OpenRouter... Tự động tối ưu endpoint ngầm, không cần Base URL.</p>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <!-- API Key Input -->
-          <div class="form-group" id="groupApiKey">
-            <div class="form-label-row">
-              <label for="cfgApiKey" id="lblApiKey">API key</label>
-              <span class="help-tooltip" id="tooltipApiKey" title="Khóa API từ nhà cung cấp">?</span>
-              <a href="#" id="linkGetGeminiKey" class="external-get-key-link hidden" title="Mở trang Google AI Studio để lấy API Key miễn phí">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px; vertical-align: -1px; margin-right: 2px;">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                  <polyline points="15 3 21 3 21 9"></polyline>
-                  <line x1="10" y1="14" x2="21" y2="3"></line>
-                </svg>
-                <span>Lấy Key Gemini miễn phí ↗</span>
-              </a>
-            </div>
-            <div class="input-with-action">
-              <input type="password" id="cfgApiKey" placeholder="Dán API Key của bạn vào đây...">
-              <button class="btn-icon-inside" id="btnToggleApiKeyVisibility" title="Hiện/Ẩn API Key" type="button">
-                <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                  <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <!-- Customized Settings Accordion -->
-          <div class="customized-settings-section">
-            <button class="section-toggle" id="btnToggleCustomized">
-              <svg class="chevron-sm" id="customizedChevron" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
-              </svg>
-              <span>Customized settings</span>
-            </button>
-
-            <div class="customized-content" id="customizedContent">
-              <!-- Display Name -->
-              <div class="form-group">
-                <label for="cfgDisplayName">Display name</label>
-                <input type="text" id="cfgDisplayName" placeholder="Ví dụ: Vilao AI, DeepSeek, OpenRouter, Google Gemini...">
+                <h2 class="settings-view-title">Trung tâm Cài đặt</h2>
+                <p class="settings-view-subtitle">Quản lý toàn diện cấu hình hệ thống, danh sách API Keys và trạng thái phiên bản</p>
               </div>
-
-              <!-- Base URL (Cách 1) -->
-              <div class="form-group" id="groupBaseUrl">
-                <label for="cfgBaseUrl">Base URL</label>
-                <input type="text" id="cfgBaseUrl" placeholder="https://api.your-provider.com/v1">
-              </div>
-
-              <!-- Gemini Auto Notice (Cách 2) -->
-              <div class="gemini-auto-notice hidden" id="geminiAutoNotice">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  <polyline points="9 12 11 14 15 10"></polyline>
-                </svg>
-                <div class="gemini-notice-text">
-                  <div class="gemini-notice-title">Endpoint Google Gemini chuẩn hóa tự động:</div>
-                  <code>https://generativelanguage.googleapis.com/v1beta/openai</code>
-                  <div class="gemini-notice-sub">Hệ thống tự động kết nối qua cổng OpenAI-compatible của Google Gemini. Bạn không cần cấu hình Base URL.</div>
-                </div>
-              </div>
-
-              <!-- API Protocol -->
-              <div class="form-group">
-                <label for="cfgProtocol">API protocol</label>
-                <div class="select-wrapper">
-                  <select id="cfgProtocol">
-                    <option value="OpenAI Chat Completions">OpenAI Chat Completions</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="divider-line"></div>
-
-              <!-- Smart Failover Auto-Rotation Toggle in Modal (Google Gemini Only) -->
-              <div class="failover-setting-box hidden" id="failoverSettingBox">
-                <div class="failover-box-left">
-                  <div class="failover-box-title">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="failover-box-icon">
-                      <polyline points="23 4 23 10 17 10"></polyline>
-                      <polyline points="1 20 1 14 7 14"></polyline>
-                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-                    </svg>
-                    <span>Tự động xoay vòng model Google Gemini khi hết token</span>
-                    <span class="badge-soft green">Khuyên dùng</span>
-                  </div>
-                  <p class="failover-box-desc">
-                    Tự động luân chuyển giữa 5 model Gemini (3.8 &rarr; 3.6 &rarr; 3.5 &rarr; 3.1 &rarr; 2.5) khi gặp lỗi hết hạn ngạch (429) hoặc quá tải.
-                  </p>
-                </div>
-                <label class="toggle-switch-ui" for="chkAutoRotateModal">
-                  <input type="checkbox" id="chkAutoRotateModal" checked>
-                  <span class="switch-slider"></span>
-                </label>
-              </div>
-
-              <!-- Models Section -->
-              <div class="models-catalog-section">
-                <div class="models-catalog-header">
-                  <div>
-                    <span class="models-title">Models</span>
-                    <span class="models-subtitle">Customized model catalog</span>
-                  </div>
-                  <div class="models-header-actions">
-                    <button class="btn-link" id="btnRestoreDefaults" type="button">Restore defaults</button>
-                    <button class="btn-link" id="btnFetchModels" type="button">Fetch available models</button>
-                  </div>
-                </div>
-
-                <!-- Dynamic Model Rows Container -->
-                <div class="models-list-container" id="modelsList">
-                  <!-- Dynamically generated rows -->
-                </div>
-
-                <!-- Add Model Button -->
-                <button class="btn-add-model" id="btnAddModel" type="button">
-                  <svg viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+              <div class="settings-header-right">
+                <button class="btn-back-to-script" id="btnBackToScript" title="Quay lại bàn làm việc trước đó" type="button">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
                   </svg>
-                  <span>Add model</span>
+                  <span id="btnBackToScriptText">Quay lại Kịch bản</span>
                 </button>
               </div>
             </div>
-          </div>
 
-          <!-- Dedicated Test Connection Box (Top of Apply) -->
-          <div class="test-connection-card" id="testConnectionCard">
-            <div class="test-conn-left">
-              <div class="test-conn-status-row">
-                <span class="status-indicator-dot" id="testConnDot"></span>
-                <span class="test-conn-title" id="testConnStatusTitle">Trạng thái kết nối API</span>
-              </div>
-              <p class="test-conn-desc" id="testConnStatusDesc">Bấm nút bên phải để kiểm tra API Key và máy chủ trước khi lưu.</p>
-            </div>
-            <button class="btn-test-conn-box" id="btnTestConnection" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="test-conn-icon">
-                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-              </svg>
-              <span id="btnTestConnText">Kiểm tra kết nối</span>
-            </button>
-          </div>
-        </div>
+            <!-- Horizontal Tabs Navigation (Ảnh 2 Tham khảo - Cyber Luxury Style) -->
+            <div class="settings-nav-tabs">
+              <button class="settings-tab-btn active" id="tabNavGeneral" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"></circle>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                <span>Cài đặt chung</span>
+              </button>
 
-        <!-- Modal Footer Actions -->
-        <div class="modal-footer">
-          <div class="modal-footer-left">
-            <span class="connection-status-msg" id="modalStatusMsg"></span>
-          </div>
-          <div class="modal-footer-right">
-            <button class="btn-modal-cancel" id="btnCancelSettings">Cancel</button>
-            <button class="btn-modal-apply" id="btnApplySettings">Apply</button>
-          </div>
-        </div>
-      </div>
-    </div>
+              <button class="settings-tab-btn" id="tabNavApiKeys" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 2l-2 2m-1.5 1.5L14 9l-1.5-1.5 1.5-1.5L12 4l-2 2 1.5 1.5L10 9 8.5 7.5 7 9l4 4 9-9z"></path>
+                  <path d="M3 21l6-6"></path>
+                  <circle cx="7.5" cy="16.5" r="2.5"></circle>
+                </svg>
+                <span>Khóa API & Models</span>
+              </button>
 
-    <!-- GENERAL SETTINGS MODAL -->
-    <div class="modal-overlay hidden" id="generalSettingsModal">
-      <div class="modal-window general-settings-window">
-        <div class="modal-header">
-          <div class="provider-badge-group">
-            <span class="provider-current-title">Cài đặt ứng dụng</span>
-            <span class="badge-custom">Tùy chỉnh</span>
-          </div>
-          <div class="modal-header-actions">
-            <button class="btn-close" id="btnCloseGeneralSettings" title="Đóng">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="modal-body">
-          <div class="settings-section">
-            <h4 class="settings-section-title">Định dạng hiển thị kịch bản (Line Spacing Mode)</h4>
-            <p class="settings-section-desc">Kiểm soát khoảng cách giữa các đoạn kịch bản tại khung kết quả, khi sao chép và xuất file.</p>
-            
-            <div class="spacing-options-grid">
-              <!-- Option 1: Sát dòng (Mặc định) -->
-              <label class="spacing-option-card active" id="cardSpacingTight">
-                <input type="radio" name="scriptLineSpacing" value="tight" id="optSpacingTight" checked>
-                <div class="spacing-card-content">
-                  <div class="spacing-card-header">
-                    <span class="spacing-radio-custom"></span>
-                    <span class="spacing-title">Sát dòng (Liền mạch - Không khoảng trống)</span>
-                    <span class="badge-default-pill">Mặc định</span>
-                  </div>
-                  <p class="spacing-desc">
-                    Xuống dòng bình thường để ngắt câu theo ý kịch bản nhưng <strong>không để khoảng trống / dòng trống</strong> giữa các đoạn. Phù hợp cho lồng tiếng, phụ đề CapCut/Premiere hoặc AI đọc giọng (TTS) không bị ngắt nhịp.
-                  </p>
-                  <div class="spacing-preview-box tight">
-                    <div>Đoạn 1: Xin chào các bạn, hôm nay chúng ta sẽ cùng bóc tách vấn đề này...</div>
-                    <div>Đoạn 2: Và mấu chốt nằm ngay ở việc tối ưu hóa chi phí sản xuất...</div>
-                  </div>
-                </div>
-              </label>
-
-              <!-- Option 2: Dãn đoạn -->
-              <label class="spacing-option-card" id="cardSpacingNormal">
-                <input type="radio" name="scriptLineSpacing" value="normal" id="optSpacingNormal">
-                <div class="spacing-card-content">
-                  <div class="spacing-card-header">
-                    <span class="spacing-radio-custom"></span>
-                    <span class="spacing-title">Dãn đoạn tiêu chuẩn</span>
-                  </div>
-                  <p class="spacing-desc">
-                    Có khoảng trống đệm cách đoạn thông thoáng theo phong cách bài viết truyền thống.
-                  </p>
-                  <div class="spacing-preview-box normal">
-                    <div>Đoạn 1: Xin chào các bạn, hôm nay chúng ta sẽ cùng bóc tách vấn đề này...</div>
-                    <div class="preview-spacer"></div>
-                    <div>Đoạn 2: Và mấu chốt nằm ngay ở việc tối ưu hóa chi phí sản xuất...</div>
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <!-- Section 2: Thông tin phiên bản & Cập nhật -->
-          <div class="settings-section" style="margin-top: 18px; padding-top: 18px; border-top: 1px solid #E2E8F0;">
-            <h4 class="settings-section-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; color: #4F46E5; flex-shrink: 0;">
-                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                <path d="M3 3v5h5"/>
-                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
-                <path d="M16 21h5v-5"/>
-              </svg>
-              <span>Phiên bản & Cập nhật hệ thống</span>
-            </h4>
-            <p class="settings-section-desc">Kiểm tra và nâng cấp ứng dụng lên phiên bản mới nhất từ GitHub.</p>
-            <div class="app-version-box">
-              <div class="app-version-info">
-                <div class="version-badge-line">
-                  <span class="version-label">Phiên bản hiện tại:</span>
-                  <span class="version-tag" id="currentAppVersionDisplay">v1.1.1</span>
-                </div>
-                <span class="version-status-text" id="appVersionStatusText">Bấm kiểm tra để nhận bản cập nhật mới nhất từ GitHub.</span>
-              </div>
-              <button class="btn-check-update" id="btnCheckUpdateManual" type="button">
-                <svg class="icon-refresh" id="iconRefreshUpdate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <button class="settings-tab-btn" id="tabNavUpdates" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <polyline points="23 4 23 10 17 10"></polyline>
                   <polyline points="1 20 1 14 7 14"></polyline>
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                 </svg>
-                <span id="btnCheckUpdateText">Kiểm tra cập nhật</span>
+                <span>Phiên bản & Cập nhật</span>
+                <span class="tab-update-dot hidden" id="tabUpdateDot"></span>
               </button>
             </div>
-          </div>
-        </div>
 
-        <div class="modal-footer">
-          <div class="modal-footer-left"></div>
-          <div class="modal-footer-right">
-            <button class="btn-modal-cancel" id="btnCancelGeneralSettings" type="button">Hủy</button>
-            <button class="btn-modal-apply" id="btnSaveGeneralSettings" type="button">Lưu Cài Đặt</button>
+            <!-- Tab Panels Scrollable Stage -->
+            <div class="settings-panels-stage">
+              <!-- PANEL 1: CÀI ĐẶT CHUNG (MODULE-BASED ECOSYSTEM ARCHITECTURE) -->
+              <div class="settings-tab-panel active" id="panelSettingsGeneral">
+                <div class="settings-card-box" id="generalSettingsModal">
+                  
+                  <!-- MODULE 1: CHỨC NĂNG KỊCH BẢN AI -->
+                  <div class="settings-module-section">
+                    <div class="settings-module-header">
+                      <div class="settings-module-title-wrap">
+                        <div class="settings-module-icon script">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                          </svg>
+                        </div>
+                        <div>
+                          <div class="settings-module-badge-row">
+                            <span class="badge-module script">CHỨC NĂNG: KỊCH BẢN AI</span>
+                          </div>
+                          <h3 class="settings-card-title">Định dạng hiển thị kịch bản (Line Spacing Mode)</h3>
+                          <p class="settings-card-subtitle">Áp dụng trực tiếp cho chức năng Kịch bản: kiểm soát khoảng cách giữa các đoạn khi hiển thị, sao chép và xuất file .TXT.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="spacing-options-grid">
+                      <!-- Option 1: Sát dòng (Mặc định) -->
+                      <label class="spacing-option-card active" id="cardSpacingTight">
+                        <input type="radio" name="scriptLineSpacing" value="tight" id="optSpacingTight" checked>
+                        <div class="spacing-card-content">
+                          <div class="spacing-card-header">
+                            <span class="spacing-radio-custom"></span>
+                            <span class="spacing-title">Sát dòng (Liền mạch - Không khoảng trống)</span>
+                            <span class="badge-default-pill">Mặc định</span>
+                          </div>
+                          <p class="spacing-desc">
+                            Xuống dòng bình thường để ngắt câu theo ý kịch bản nhưng <strong>không để khoảng trống / dòng trống</strong> giữa các đoạn. Phù hợp cho lồng tiếng, phụ đề CapCut/Premiere hoặc AI đọc giọng (TTS) không bị ngắt nhịp.
+                          </p>
+                          <div class="spacing-preview-box tight">
+                            <div>Đoạn 1: Xin chào các bạn, hôm nay chúng ta sẽ cùng bóc tách vấn đề này...</div>
+                            <div>Đoạn 2: Và mấu chốt nằm ngay ở việc tối ưu hóa chi phí sản xuất...</div>
+                          </div>
+                        </div>
+                      </label>
+
+                      <!-- Option 2: Dãn đoạn -->
+                      <label class="spacing-option-card" id="cardSpacingNormal">
+                        <input type="radio" name="scriptLineSpacing" value="normal" id="optSpacingNormal">
+                        <div class="spacing-card-content">
+                          <div class="spacing-card-header">
+                            <span class="spacing-radio-custom"></span>
+                            <span class="spacing-title">Dãn đoạn tiêu chuẩn</span>
+                          </div>
+                          <p class="spacing-desc">
+                            Có khoảng trống đệm cách đoạn thông thoáng theo phong cách bài viết truyền thống.
+                          </p>
+                          <div class="spacing-preview-box normal">
+                            <div>Đoạn 1: Xin chào các bạn, hôm nay chúng ta sẽ cùng bóc tách vấn đề này...</div>
+                            <div class="preview-spacer"></div>
+                            <div>Đoạn 2: Và mấu chốt nằm ngay ở việc tối ưu hóa chi phí sản xuất...</div>
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- MODULE DIVIDER -->
+                  <div class="settings-module-divider"></div>
+
+                  <!-- MODULE 2: CHỨC NĂNG TIÊU ĐỀ YOUTUBE -->
+                  <div class="settings-module-section">
+                    <div class="settings-module-header">
+                      <div class="settings-module-title-wrap">
+                        <div class="settings-module-icon title">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                          </svg>
+                        </div>
+                        <div>
+                          <div class="settings-module-badge-row">
+                            <span class="badge-module title">CHỨC NĂNG: TIÊU ĐỀ YOUTUBE</span>
+                          </div>
+                          <h3 class="settings-card-title">Cấu hình chức năng Tiêu đề (Viral Title Preferences)</h3>
+                          <p class="settings-card-subtitle">Áp dụng trực tiếp cho chức năng Tiêu đề: thiết lập ngôn ngữ ưu tiên khi mở ứng dụng và quy chuẩn an toàn CTR.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="module-settings-grid">
+                      <!-- Setting 1: Ngôn ngữ mặc định -->
+                      <div class="module-setting-item">
+                        <div class="setting-item-left">
+                          <label class="setting-item-label" for="selTitleDefaultLang">Ngôn ngữ mục tiêu mặc định khi khởi động</label>
+                          <p class="setting-item-desc">Tự động chọn sẵn ngôn ngữ này mỗi khi mở bàn làm việc Tiêu đề.</p>
+                        </div>
+                        <div class="setting-item-right">
+                          <select class="app-select setting-select" id="selTitleDefaultLang">
+                            <option value="last_used">Ghi nhớ ngôn ngữ vừa dùng gần nhất (Khuyên dùng)</option>
+                            <option value="vi">Tiếng Việt (VN)</option>
+                            <option value="en">English (US)</option>
+                            <option value="zh">Tiếng Trung (中文)</option>
+                            <option value="ja">Tiếng Nhật (日本語)</option>
+                            <option value="ko">Tiếng Hàn (한국어)</option>
+                            <option value="es">Tây Ban Nha (Español)</option>
+                            <option value="pt">Bồ Đào Nha (Português EU)</option>
+                            <option value="br">Brazil (Português BR)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- MODULE DIVIDER -->
+                  <div class="settings-module-divider"></div>
+
+                  <!-- MODULE 3: HỆ THỐNG CHUNG -->
+                  <div class="settings-module-section">
+                    <div class="settings-module-header">
+                      <div class="settings-module-title-wrap">
+                        <div class="settings-module-icon system">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                          </svg>
+                        </div>
+                        <div>
+                          <div class="settings-module-badge-row">
+                            <span class="badge-module system">HỆ THỐNG CHUNG</span>
+                          </div>
+                          <h3 class="settings-card-title">Cài đặt vận hành ứng dụng</h3>
+                          <p class="settings-card-subtitle">Áp dụng chung cho toàn bộ ứng dụng AutoContent Studio.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="module-settings-grid">
+                      <div class="module-setting-item">
+                        <div class="setting-item-left">
+                          <label class="setting-item-label" for="chkAutoCheckUpdateStartup">Tự động kiểm tra bản cập nhật khi mở ứng dụng</label>
+                          <p class="setting-item-desc">Nhận thông báo cập nhật siêu tốc từ GitHub khi có phiên bản mới mà không làm gián đoạn công việc.</p>
+                        </div>
+                        <div class="setting-item-right">
+                          <label class="toggle-switch-ui">
+                            <input type="checkbox" id="chkAutoCheckUpdateStartup" checked>
+                            <span class="switch-slider"></span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- FOOTER SAVE ACTIONS -->
+                  <div class="settings-card-footer" style="margin-top: 18px;">
+                    <button class="btn-modal-cancel" id="btnCancelGeneralSettings" type="button" style="display:none;">Hủy</button>
+                    <button class="btn-modal-apply" id="btnSaveGeneralSettings" type="button">Lưu Cài Đặt</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PANEL 2: KHÓA API & MODELS (Chứa toàn bộ form quản lý API cấu trúc cao cấp) -->
+              <div class="settings-tab-panel hidden" id="panelSettingsApiKeys">
+                <div class="settings-card-box" id="settingsModal">
+                  <!-- Header Actions của API -->
+                  <div class="api-manager-header-bar">
+                    <div class="provider-badge-group">
+                      <span class="provider-current-title" id="modalProviderTitle">Cấu hình API</span>
+                      <span class="badge-custom">Custom</span>
+                      <span class="status-indicator-dot offline" id="modalHeaderStatusDot" title="Trạng thái kết nối API"></span>
+                    </div>
+                    <div class="api-manager-actions">
+                      <button class="btn-add-provider-header" id="btnAddNewProviderHeader" title="Thêm cấu hình API mới" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <line x1="12" y1="5" x2="12" y2="19"></line>
+                          <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        <span>Thêm API Mới</span>
+                      </button>
+                      <button class="btn-delete-provider-box" id="btnDeleteProvider" title="Xóa cấu hình API này" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        <span>Xóa API</span>
+                      </button>
+                      <button class="btn-close" id="btnCloseModal" title="Đóng" style="display:none;" type="button"></button>
+                    </div>
+                  </div>
+
+                  <!-- Provider Tab Switcher -->
+                  <div class="provider-tabs-row" id="providerTabs">
+                    <!-- Rendered dynamically -->
+                  </div>
+
+                  <!-- Provider Connection Type Selector (Cách 1 & Cách 2) -->
+                  <div class="provider-type-block">
+                    <label class="provider-type-label">Phương thức kết nối API:</label>
+                    <div class="provider-type-grid">
+                      <!-- Cách 1: OpenAI / Custom -->
+                      <label class="provider-type-card active" id="cardTypeOpenAI">
+                        <input type="radio" name="providerType" value="openai" id="radioTypeOpenAI" checked>
+                        <div class="type-card-radio-circle"></div>
+                        <div class="type-card-content">
+                          <div class="type-card-header">
+                            <span class="type-card-title">Cách 1: Chuẩn OpenAI / Custom</span>
+                            <span class="type-badge-pill">Base URL + Key</span>
+                          </div>
+                          <p class="type-card-desc">Dành cho Vilao AI, DeepSeek, OpenRouter, Groq hoặc máy chủ tương thích OpenAI.</p>
+                        </div>
+                      </label>
+
+                      <!-- Cách 2: Chỉ cần API Key -->
+                      <label class="provider-type-card" id="cardTypeGemini">
+                        <input type="radio" name="providerType" value="gemini" id="radioTypeGemini">
+                        <div class="type-card-radio-circle"></div>
+                        <div class="type-card-content">
+                          <div class="type-card-header">
+                            <span class="type-card-title">Cách 2: Chỉ cần API Key</span>
+                            <span class="type-badge-pill gemini">Chỉ cần API Key</span>
+                          </div>
+                          <p class="type-card-desc">Dành cho Google Gemini, OpenAI, Groq, OpenRouter... Tự động tối ưu endpoint ngầm, không cần Base URL.</p>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- API Key Input -->
+                  <div class="form-group" id="groupApiKey">
+                    <div class="form-label-row">
+                      <label for="cfgApiKey" id="lblApiKey">API key</label>
+                      <span class="help-tooltip" id="tooltipApiKey" title="Khóa API từ nhà cung cấp">?</span>
+                      <a href="#" id="linkGetGeminiKey" class="external-get-key-link hidden" title="Mở trang Google AI Studio để lấy API Key miễn phí">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px; vertical-align: -1px; margin-right: 2px;">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                          <polyline points="15 3 21 3 21 9"></polyline>
+                          <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                        <span>Lấy Key Gemini miễn phí ↗</span>
+                      </a>
+                    </div>
+                    <div class="input-with-action">
+                      <input type="password" id="cfgApiKey" placeholder="Dán API Key của bạn vào đây...">
+                      <button class="btn-icon-inside" id="btnToggleApiKeyVisibility" title="Hiện/Ẩn API Key" type="button">
+                        <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                          <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Customized Settings Accordion -->
+                  <div class="customized-settings-section">
+                    <button class="section-toggle" id="btnToggleCustomized" type="button">
+                      <svg class="chevron-sm" id="customizedChevron" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                      </svg>
+                      <span>Customized settings</span>
+                    </button>
+
+                    <div class="customized-content" id="customizedContent">
+                      <!-- Display Name -->
+                      <div class="form-group">
+                        <label for="cfgDisplayName">Display name</label>
+                        <input type="text" id="cfgDisplayName" placeholder="Ví dụ: Vilao AI, DeepSeek, OpenRouter, Google Gemini...">
+                      </div>
+
+                      <!-- Base URL (Cách 1) -->
+                      <div class="form-group" id="groupBaseUrl">
+                        <label for="cfgBaseUrl">Base URL</label>
+                        <input type="text" id="cfgBaseUrl" placeholder="https://api.your-provider.com/v1">
+                      </div>
+
+                      <!-- Gemini Auto Notice (Cách 2) -->
+                      <div class="gemini-auto-notice hidden" id="geminiAutoNotice">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                          <polyline points="9 12 11 14 15 10"></polyline>
+                        </svg>
+                        <div class="gemini-notice-text">
+                          <div class="gemini-notice-title">Endpoint Google Gemini chuẩn hóa tự động:</div>
+                          <code>https://generativelanguage.googleapis.com/v1beta/openai</code>
+                          <div class="gemini-notice-sub">Hệ thống tự động kết nối qua cổng OpenAI-compatible của Google Gemini. Bạn không cần cấu hình Base URL.</div>
+                        </div>
+                      </div>
+
+                      <!-- API Protocol -->
+                      <div class="form-group">
+                        <label for="cfgProtocol">API protocol</label>
+                        <div class="select-wrapper">
+                          <select id="cfgProtocol">
+                            <option value="OpenAI Chat Completions">OpenAI Chat Completions</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div class="divider-line"></div>
+
+                      <!-- Smart Failover Auto-Rotation Toggle in Modal (Google Gemini Only) -->
+                      <div class="failover-setting-box hidden" id="failoverSettingBox">
+                        <div class="failover-box-left">
+                          <div class="failover-box-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="failover-box-icon">
+                              <polyline points="23 4 23 10 17 10"></polyline>
+                              <polyline points="1 20 1 14 7 14"></polyline>
+                              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                            </svg>
+                            <span>Tự động xoay vòng model Google Gemini khi hết token</span>
+                            <span class="badge-soft green">Khuyên dùng</span>
+                          </div>
+                          <p class="failover-box-desc">
+                            Tự động luân chuyển giữa 5 model Gemini (3.8 &rarr; 3.6 &rarr; 3.5 &rarr; 3.1 &rarr; 2.5) khi gặp lỗi hết hạn ngạch (429) hoặc quá tải.
+                          </p>
+                        </div>
+                        <label class="toggle-switch-ui" for="chkAutoRotateModal">
+                          <input type="checkbox" id="chkAutoRotateModal" checked>
+                          <span class="switch-slider"></span>
+                        </label>
+                      </div>
+
+                      <!-- Models Section -->
+                      <div class="models-catalog-section">
+                        <div class="models-catalog-header">
+                          <div>
+                            <span class="models-title">Models</span>
+                            <span class="models-subtitle">Customized model catalog</span>
+                          </div>
+                          <div class="models-header-actions">
+                            <button class="btn-link" id="btnRestoreDefaults" type="button">Restore defaults</button>
+                            <button class="btn-link" id="btnFetchModels" type="button">Fetch available models</button>
+                          </div>
+                        </div>
+
+                        <!-- Dynamic Model Rows Container -->
+                        <div class="models-list-container" id="modelsList">
+                          <!-- Dynamically generated rows -->
+                        </div>
+
+                        <!-- Add Model Button -->
+                        <button class="btn-add-model" id="btnAddModel" type="button">
+                          <svg viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                          </svg>
+                          <span>Add model</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Dedicated Test Connection Box (Top of Apply) -->
+                  <div class="test-connection-card" id="testConnectionCard">
+                    <div class="test-conn-left">
+                      <div class="test-conn-status-row">
+                        <span class="status-indicator-dot" id="testConnDot"></span>
+                        <span class="test-conn-title" id="testConnStatusTitle">Trạng thái kết nối API</span>
+                      </div>
+                      <p class="test-conn-desc" id="testConnStatusDesc">Bấm nút bên phải để kiểm tra API Key và máy chủ trước khi lưu.</p>
+                    </div>
+                    <button class="btn-test-conn-box" id="btnTestConnection" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="test-conn-icon">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                      </svg>
+                      <span id="btnTestConnText">Kiểm tra kết nối</span>
+                    </button>
+                  </div>
+
+                  <!-- API Form Footer Actions -->
+                  <div class="api-form-footer">
+                    <div class="modal-footer-left">
+                      <span class="connection-status-msg" id="modalStatusMsg"></span>
+                    </div>
+                    <div class="modal-footer-right">
+                      <button class="btn-modal-cancel" id="btnCancelSettings" type="button">Hủy / Về Kịch bản</button>
+                      <button class="btn-modal-apply" id="btnApplySettings" type="button">Lưu Cấu Hình</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PANEL 3: PHIÊN BẢN & CẬP NHẬT -->
+              <div class="settings-tab-panel hidden" id="panelSettingsUpdates">
+                <div class="settings-card-box">
+                  <h3 class="settings-card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; color: #4F46E5; vertical-align: -3px; margin-right: 6px;">
+                      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                      <path d="M3 3v5h5"/>
+                      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                      <path d="M16 21h5v-5"/>
+                    </svg>
+                    <span>Phiên bản & Cập nhật hệ thống</span>
+                  </h3>
+                  <p class="settings-card-subtitle">Kiểm tra và nâng cấp ứng dụng lên phiên bản mới nhất từ GitHub qua cơ chế Hot-Update siêu tốc.</p>
+
+                  <div class="app-version-box" style="margin-top: 16px;">
+                    <div class="app-version-info">
+                      <div class="version-badge-line">
+                        <span class="version-label">Phiên bản hiện tại:</span>
+                        <span class="version-tag" id="currentAppVersionDisplay">v1.1.5</span>
+                      </div>
+                      <span class="version-status-text" id="appVersionStatusText">Bấm kiểm tra để nhận bản cập nhật mới nhất từ GitHub.</span>
+                    </div>
+                    <button class="btn-check-update" id="btnCheckUpdateManual" type="button">
+                      <svg class="icon-refresh" id="iconRefreshUpdate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10"></polyline>
+                        <polyline points="1 20 1 14 7 14"></polyline>
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                      </svg>
+                      <span id="btnCheckUpdateText">Kiểm tra cập nhật</span>
+                    </button>
+                  </div>
+
+                  <!-- Security Note Box (Ảnh 2 Tham khảo) -->
+                  <div class="security-notice-box" style="margin-top: 24px;">
+                    <div class="security-notice-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                      </svg>
+                    </div>
+                    <div class="security-notice-content">
+                      <div class="security-notice-title">Lưu ý bảo mật (Zero-Leakage Architecture)</div>
+                      <div class="security-notice-desc">
+                        Toàn bộ API Key và dữ liệu cá nhân của bạn được mã hóa và lưu trữ cục bộ 100% trên thiết bị của bạn. Khóa API không bao giờ được gửi đến bất kỳ máy chủ trung gian nào ngoài máy chủ chính thức của nhà cung cấp AI tương ứng.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </div> <!-- /#viewSettings -->
+      </div> <!-- /.app-stage-wrapper -->
+    </div> <!-- /.app-layout-container -->
 
     <!-- UPDATE NOTIFICATION MODAL (NON-INTRUSIVE & OPTIONAL) -->
     <div class="modal-overlay hidden" id="updateNotificationModal">
