@@ -1,6 +1,6 @@
 # 📜 AUTOCONTENT STUDIO - PROJECT RULES & DEVELOPER GUIDELINES
 
-Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập trình viên và Trợ lý AI (Antigravity, Cursor, Copilot...) khi tham gia phát triển mã nguồn của ứng dụng **AutoContent Studio**. Mọi thay đổi trong mã nguồn đều phải tuân thủ nghiêm ngặt 5 bộ quy tắc dưới đây.
+Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập trình viên và Trợ lý AI (Antigravity, Cursor, Copilot...) khi tham gia phát triển mã nguồn của ứng dụng **AutoContent Studio**. Mọi thay đổi trong mã nguồn đều phải tuân thủ nghiêm ngặt 9 bộ quy tắc dưới đây.
 
 ---
 
@@ -137,6 +137,20 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
 2. **Điều kiện kích hoạt viết mã (Execution Trigger)**:
    * AI **chỉ được phép bắt tay vào sửa file/viết code** sau khi người dùng đã xem phương án và phản hồi xác nhận rõ ràng (ví dụ: *"OK"*, *"Đồng ý"*, *"Thực hiện đi"*...).
    * Mọi hành động tự ý code trước khi người dùng xác nhận đều bị coi là **vi phạm quy trình phát triển** của dự án.
+
+---
+
+## 🚫 LUẬT 9: CHUẨN ĐẦU RA SẠCH & CẤM DỮ LIỆU MẪU Ở PHẦN OUTPUT (CLEAN BLANK OUTPUT POLICY)
+
+1. **Phạm vi áp dụng toàn diện**:
+   * Áp dụng bắt buộc cho toàn bộ các chức năng hiện tại (**Kịch bản**, **Tiêu đề**, **Mô tả**) và **tất cả các tính năng/module mới phát triển trong tương lai**.
+2. **Quy tắc cấm tuyệt đối ở khu vực Output (Zero Dummy Data Policy)**:
+   * **Cấm chèn dữ liệu mẫu**: Tuyệt đối không chèn bất kỳ đoạn văn bản mẫu, chữ mẫu, kịch bản mẫu, tiêu đề mẫu giả định hay kết quả mẫu vào khung hiển thị đầu ra (Output).
+   * **Cấm chèn thẻ giới thiệu / marketing rác**: Không tự ý chèn các khối card giới thiệu tính năng (ví dụ: *"Sẵn sàng tối ưu..."*, *"Tính năng 3 tầng SEO..."*, *"Các điểm nổi bật..."*) vào khung Output làm rối mắt người dùng.
+   * **Trạng thái mặc định**: Khung Output khi người dùng chưa bấm tạo nội dung luôn luôn là một **khung trống hoàn toàn (Clean Blank Container)**, sạch sẽ, tinh gọn theo chuẩn tối giản hiện đại.
+3. **Chuẩn hóa ô nhập liệu (Input Cleanliness)**:
+   * Các ô nhập liệu (Textarea / Input) không cần để placeholder ví dụ dài dòng làm phân tâm người dùng. Mặc định để trống (`placeholder=""`) hoặc giữ cực kỳ ngắn gọn, không chèn các đoạn văn bản ví dụ dài.
+
 
 
 

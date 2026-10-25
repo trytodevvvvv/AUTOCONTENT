@@ -457,6 +457,7 @@
                       <span class="step-num small">2</span>
                       <span class="options-heading title-gradient-heading">NGÔN NGỮ MỤC TIÊU (TARGET LANGUAGE)</span>
                     </div>
+                    <span class="desc-lang-autodetect-badge title-lang-autodetect-badge" id="titleLangAutoBadge" title="Tự động phát hiện theo ngôn ngữ đầu vào">⚡ Tự động nhận diện</span>
                   </div>
                   <div class="title-lang-grid" id="titleLangGrid">
                     <button type="button" class="title-lang-pill active" data-lang="vi" data-label="🇻🇳 Tiếng Việt">
@@ -534,10 +535,6 @@
                     <span id="btnGenerateTitlesText">TẠO 5 TIÊU ĐỀ TINH HOA ĐỘT PHÁ</span>
                   </span>
                 </button>
-                <div class="title-ctr-tip">
-                  <span class="tip-bulb">💡</span>
-                  <span><strong>Mẹo CTR:</strong> Tiêu đề ≤ 60 ký tự hiển thị trọn vẹn 100% trên app điện thoại.</span>
-                </div>
               </div>
             </section>
 
@@ -572,6 +569,32 @@
                 <div class="stat-item">
                   <span class="stat-label">Ngôn ngữ:</span>
                   <span class="stat-value" id="titleMetaLang">Tiếng Việt</span>
+                </div>
+              </div>
+
+              <!-- Photoshop Character Toolbar (Định dạng kiểu chữ Photoshop) -->
+              <div class="title-character-toolbar" id="titleCharacterToolbar">
+                <div class="char-toolbar-left">
+                  <span class="char-toolbar-icon">🔤</span>
+                  <span class="char-toolbar-title">Kiểu chữ:</span>
+                </div>
+                <div class="char-case-group" id="titleCharCaseGroup">
+                  <button type="button" class="char-case-btn active" data-case="original" title="Giữ nguyên bản gốc từ AI">
+                    <span class="char-case-badge">✦</span>
+                    <span class="char-case-name">Gốc</span>
+                  </button>
+                  <button type="button" class="char-case-btn" data-case="titlecase" title="Viết hoa chữ cái đầu mỗi từ (Title Case)">
+                    <span class="char-case-badge">Tt</span>
+                    <span class="char-case-name">Hoa Từng Từ</span>
+                  </button>
+                  <button type="button" class="char-case-btn" data-case="uppercase" title="In hoa toàn bộ ký tự (ALL CAPS)">
+                    <span class="char-case-badge">TT</span>
+                    <span class="char-case-name">IN HOA</span>
+                  </button>
+                  <button type="button" class="char-case-btn" data-case="sentencecase" title="Viết hoa chữ đầu câu (Sentence Case)">
+                    <span class="char-case-badge">T.</span>
+                    <span class="char-case-name">Hoa Đầu Câu</span>
+                  </button>
                 </div>
               </div>
 
@@ -671,12 +694,58 @@
                   </div>
                 </div>
 
-                <!-- KHỐI 2: CHỌN DẠNG KỊCH BẢN & NỘI DUNG (DÁN TRỰC TIẾP) -->
+                <!-- KHỐI 2: NGÔN NGỮ MỤC TIÊU (8 NGÔN NGỮ ĐỒNG BỘ INPUT / OUTPUT) -->
                 <div class="desc-card-box">
                   <div class="desc-card-header">
                     <div class="desc-card-title-group">
                       <span class="desc-card-step">2</span>
+                      <label class="desc-card-title desc-gradient-title">Ngôn ngữ mục tiêu (Target Language)</label>
+                    </div>
+                    <span class="desc-lang-autodetect-badge" id="descLangAutoBadge" title="Tự động phát hiện theo ngôn ngữ đầu vào">⚡ Tự động nhận diện</span>
+                  </div>
+                  <div class="desc-lang-grid" id="descLangGrid">
+                    <button type="button" class="desc-lang-pill active" data-lang="vi" data-label="🇻🇳 Tiếng Việt">
+                      <span class="lang-tag">VN</span>
+                      <span class="lang-name">Tiếng Việt</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="en" data-label="🇺🇸 English">
+                      <span class="lang-tag">EN</span>
+                      <span class="lang-name">English</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="zh" data-label="🇨🇳 Tiếng Trung (中文)">
+                      <span class="lang-tag">CN</span>
+                      <span class="lang-name">中文 (Trung)</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="ja" data-label="🇯🇵 Tiếng Nhật (日本語)">
+                      <span class="lang-tag">JP</span>
+                      <span class="lang-name">日本語 (Nhật)</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="ko" data-label="🇰🇷 Tiếng Hàn (한국어)">
+                      <span class="lang-tag">KR</span>
+                      <span class="lang-name">한국어 (Hàn)</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="es" data-label="🇪🇸 Tây Ban Nha (Español)">
+                      <span class="lang-tag">ES</span>
+                      <span class="lang-name">Español</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="pt" data-label="🇵🇹 Bồ Đào Nha (Português EU)">
+                      <span class="lang-tag">PT</span>
+                      <span class="lang-name">Português</span>
+                    </button>
+                    <button type="button" class="desc-lang-pill" data-lang="br" data-label="🇧🇷 Brazil (Português BR)">
+                      <span class="lang-tag">BR</span>
+                      <span class="lang-name">Brasil (BR)</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- KHỐI 3: CHỌN DẠNG KỊCH BẢN & NỘI DUNG (DÁN TRỰC TIẾP) -->
+                <div class="desc-card-box">
+                  <div class="desc-card-header">
+                    <div class="desc-card-title-group">
+                      <span class="desc-card-step">3</span>
                       <label class="desc-card-title" for="inputDescContent">Nội dung kịch bản (Dán trực tiếp)</label>
+                      <span class="desc-format-autodetect-badge" id="descFormatAutoBadge" title="Tự động nhận diện kịch bản văn bản hoặc phụ đề SRT">⚡ Tự nhận diện định dạng</span>
                     </div>
                     <div class="desc-card-actions">
                       <button class="btn-mini-action" id="btnPasteDescContent" title="Dán nội dung từ Clipboard" type="button">Dán</button>
@@ -723,51 +792,6 @@
                     </div>
                   </div>
                 </div>
-
-                <!-- KHỐI 3: NGÔN NGỮ MỤC TIÊU (8 NGÔN NGỮ ĐỒNG BỘ INPUT / OUTPUT) -->
-                <div class="desc-card-box">
-                  <div class="desc-card-header">
-                    <div class="desc-card-title-group">
-                      <span class="desc-card-step">3</span>
-                      <label class="desc-card-title">Ngôn ngữ mục tiêu (Target Language)</label>
-                    </div>
-                    <span class="desc-lang-autodetect-badge" id="descLangAutoBadge" title="Tự động phát hiện theo ngôn ngữ đầu vào">⚡ Tự động nhận diện</span>
-                  </div>
-                  <div class="desc-lang-grid" id="descLangGrid">
-                    <button type="button" class="desc-lang-pill active" data-lang="vi" data-label="🇻🇳 Tiếng Việt">
-                      <span class="lang-tag">VN</span>
-                      <span class="lang-name">Tiếng Việt</span>
-                    </button>
-                    <button type="button" class="desc-lang-pill" data-lang="en" data-label="🇺🇸 English">
-                      <span class="lang-tag">EN</span>
-                      <span class="lang-name">English</span>
-                    </button>
-                    <button type="button" class="desc-lang-pill" data-lang="zh" data-label="🇨🇳 Tiếng Trung (中文)">
-                      <span class="lang-tag">CN</span>
-                      <span class="lang-name">中文 (Trung)</span>
-                    </button>
-                    <button type="button" class="desc-lang-pill" data-lang="ja" data-label="🇯🇵 Tiếng Nhật (日本語)">
-                      <span class="lang-tag">JP</span>
-                      <span class="lang-name">日本語 (Nhật)</span>
-                    </button>
-                    <button type="button" class="desc-lang-pill" data-lang="ko" data-label="🇰🇷 Tiếng Hàn (한국어)">
-                      <span class="lang-tag">KR</span>
-                      <span class="lang-name">한국어 (Hàn)</span>
-                    </button>
-                    <button type="button" class="desc-lang-pill" data-lang="es" data-label="🇪🇸 Tây Ban Nha (Español)">
-                      <span class="lang-tag">ES</span>
-                      <span class="lang-name">Español</span>
-                    </button>
-                    <button type="button" class="desc-lang-pill" data-lang="pt" data-label="🇵🇹 Bồ Đào Nha (Português EU)">
-                      <span class="lang-tag">PT</span>
-                      <span class="lang-name">Português</span>
-                    </button>
-                    <button type="button" class="desc-lang-pill" data-lang="br" data-label="🇧🇷 Brazil (Português BR)">
-                      <span class="lang-tag">BR</span>
-                      <span class="lang-name">Brasil (BR)</span>
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <!-- CHÂN PANEL CỐ ĐỊNH SÁT ĐÁY BOX (PANEL FOOTER ACTION) -->
@@ -781,10 +805,6 @@
                     <span id="btnGenerateDescText">TẠO MÔ TẢ SEO & TAGS YOUTUBE</span>
                   </span>
                 </button>
-                <div class="desc-seo-tip">
-                  <span class="tip-bulb">💡</span>
-                  <span><strong>Mẹo SEO:</strong> Mô tả chuẩn 3 tầng (Hook - Chapters - CTA) & Tags ≤ 500 ký tự giúp video lên Top đề xuất.</span>
-                </div>
               </div>
             </section>
 

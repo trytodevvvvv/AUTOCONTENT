@@ -36,14 +36,20 @@ const state = {
   pendingUpdate: null,
   titleState: {
     targetLanguage: 'vi',
+    isUserManualLang: false,
     isGenerating: false,
     titles: [],
-    abortController: null
+    selectedCase: 'original',
+    abortController: null,
+    _autoBadgeTimer: null
   },
   descriptionState: {
     mode: 'plain',
     targetLanguage: 'vi',
     isUserManualLang: false,
+    isUserManualMode: false,
+    _autoBadgeTimer: null,
+    _autoFormatTimer: null,
     isGenerating: false,
     tags: [],
     descriptionText: '',
@@ -216,6 +222,7 @@ const DOM = {
   descTitleCharCount: document.getElementById('descTitleCharCount'),
   btnModePlain: document.getElementById('btnModePlain'),
   btnModeSrt: document.getElementById('btnModeSrt'),
+  descFormatAutoBadge: document.getElementById('descFormatAutoBadge'),
   inputDescContent: document.getElementById('inputDescContent'),
   btnPasteDescContent: document.getElementById('btnPasteDescContent'),
   btnClearDescContent: document.getElementById('btnClearDescContent'),
@@ -252,6 +259,7 @@ const DOM = {
   titleCharCount: document.getElementById('titleCharCount'),
   titleWordCount: document.getElementById('titleWordCount'),
   titleSelectedLangBadge: document.getElementById('titleSelectedLangBadge'),
+  titleLangAutoBadge: document.getElementById('titleLangAutoBadge'),
   titleLangGrid: document.getElementById('titleLangGrid'),
   btnGenerateTitles: document.getElementById('btnGenerateTitles'),
   btnGenerateTitlesText: document.getElementById('btnGenerateTitlesText'),
@@ -263,6 +271,8 @@ const DOM = {
   titleLoadingState: document.getElementById('titleLoadingState'),
   titleLoadingText: document.getElementById('titleLoadingText'),
   titleResultsList: document.getElementById('titleResultsList'),
+  titleCharacterToolbar: document.getElementById('titleCharacterToolbar'),
+  titleCharCaseGroup: document.getElementById('titleCharCaseGroup'),
   titleCountPill: document.getElementById('titleCountPill'),
   titleStatusBadge: document.getElementById('titleStatusBadge'),
   titleStatusText: document.getElementById('titleStatusText'),
@@ -413,6 +423,7 @@ async function initApp() {
   checkReadiness();
   checkTitleReadiness();
   checkDescReadiness();
+  updateTitleCaseButtonsUI();
   initUpdateSystem();
 }
 
@@ -645,10 +656,10 @@ function bindEvents() {
     DOM.btnClearDescContent.addEventListener('click', clearDescContent);
   }
   if (DOM.btnModePlain) {
-    DOM.btnModePlain.addEventListener('click', () => setDescMode('plain'));
+    DOM.btnModePlain.addEventListener('click', () => setDescMode('plain', true, false));
   }
   if (DOM.btnModeSrt) {
-    DOM.btnModeSrt.addEventListener('click', () => setDescMode('srt'));
+    DOM.btnModeSrt.addEventListener('click', () => setDescMode('srt', true, false));
   }
   if (DOM.descLangGrid) {
     const descPills = DOM.descLangGrid.querySelectorAll('.desc-lang-pill');
@@ -738,6 +749,20 @@ function bindEvents() {
       if (!state.titleState.isGenerating) {
         startTitleGeneration();
       }
+    });
+  }
+  if (DOM.titleCharCaseGroup) {
+    const caseBtns = DOM.titleCharCaseGroup.querySelectorAll('.char-case-btn');
+    caseBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selectedCase = btn.getAttribute('data-case') || 'original';
+        if (state.titleState.selectedCase === selectedCase) return;
+        state.titleState.selectedCase = selectedCase;
+        updateTitleCaseButtonsUI();
+        if (state.titleState.titles && state.titleState.titles.length > 0) {
+          renderTitleResults(state.titleState.titles);
+        }
+      });
     });
   }
 
@@ -2786,6 +2811,7 @@ function updateTitleInputCounts() {
   if (DOM.titleWordCount) DOM.titleWordCount.textContent = `${wordCount} từ`;
 
   checkTitleReadiness();
+  autoDetectTitleLanguage();
 }
 
 function checkTitleReadiness() {
@@ -2806,7 +2832,7 @@ function checkTitleReadiness() {
   }
 }
 
-function selectTitleTargetLanguage(langKey) {
+function selectTitleTargetLanguage(langKey, isAuto = false) {
   if (state.titleState.isGenerating) return;
 
   const langObj = TITLE_TARGET_LANGUAGES[langKey];
@@ -2814,16 +2840,34 @@ function selectTitleTargetLanguage(langKey) {
 
   state.titleState.targetLanguage = langKey;
 
+  if (!isAuto) {
+    state.titleState.isUserManualLang = true;
+  }
+
   // Update pills active state
   if (DOM.titleLangGrid) {
     const pills = DOM.titleLangGrid.querySelectorAll('.title-lang-pill');
     pills.forEach(p => {
-      if (p.getAttribute('data-lang') === langKey) {
-        p.classList.add('active');
-      } else {
-        p.classList.remove('active');
-      }
+      p.classList.toggle('active', p.getAttribute('data-lang') === langKey);
     });
+  }
+
+  // Update auto-detect badge
+  if (DOM.titleLangAutoBadge) {
+    if (isAuto) {
+      DOM.titleLangAutoBadge.textContent = `⚡ Nhận diện: ${langObj.name}`;
+      DOM.titleLangAutoBadge.classList.add('detected');
+      clearTimeout(state.titleState._autoBadgeTimer);
+      state.titleState._autoBadgeTimer = setTimeout(() => {
+        if (DOM.titleLangAutoBadge) {
+          DOM.titleLangAutoBadge.textContent = '⚡ Tự động nhận diện';
+          DOM.titleLangAutoBadge.classList.remove('detected');
+        }
+      }, 2500);
+    } else {
+      DOM.titleLangAutoBadge.textContent = `🔒 Đã chọn: ${langObj.name}`;
+      DOM.titleLangAutoBadge.classList.remove('detected');
+    }
   }
 
   // Update badge and meta stat bar
@@ -2835,8 +2879,21 @@ function selectTitleTargetLanguage(langKey) {
   }
 }
 
+function autoDetectTitleLanguage() {
+  if (state.titleState.isUserManualLang) return;
+  const text = (DOM.inputOriginalTitle?.value || '').trim();
+
+  if (!text) return;
+
+  const detected = detectLanguageFromText(text);
+  if (detected && detected !== state.titleState.targetLanguage) {
+    selectTitleTargetLanguage(detected, true);
+  }
+}
+
 function loadSampleTitle() {
   if (state.titleState.isGenerating) return;
+  state.titleState.isUserManualLang = false;
   const current = (DOM.inputOriginalTitle?.value || '').trim();
   let next = SAMPLE_TITLES[0];
   const idx = SAMPLE_TITLES.indexOf(current);
@@ -2856,6 +2913,7 @@ function loadSampleTitle() {
 
 async function pasteTitleInput() {
   if (state.titleState.isGenerating) return;
+  state.titleState.isUserManualLang = false;
   try {
     const text = await navigator.clipboard.readText();
     if (text && DOM.inputOriginalTitle) {
@@ -2873,10 +2931,15 @@ async function pasteTitleInput() {
 
 function clearTitleInput() {
   if (state.titleState.isGenerating) return;
+  state.titleState.isUserManualLang = false;
   if (DOM.inputOriginalTitle) {
     DOM.inputOriginalTitle.value = '';
     updateTitleInputCounts();
     DOM.inputOriginalTitle.focus();
+  }
+  if (DOM.titleLangAutoBadge) {
+    DOM.titleLangAutoBadge.textContent = '⚡ Tự động nhận diện';
+    DOM.titleLangAutoBadge.classList.remove('detected');
   }
 }
 
@@ -3314,18 +3377,47 @@ function cleanTitleString(str) {
     .trim();
 }
 
+function formatTitleWithCase(str, caseType) {
+  if (!str) return '';
+  switch (caseType) {
+    case 'uppercase':
+      return str.toUpperCase();
+    case 'sentencecase': {
+      const lower = str.toLowerCase();
+      return lower.replace(/(^|[.!?:\u2013\u2014]\s*)(\p{L})/gu, (m, p1, p2) => p1 + p2.toUpperCase());
+    }
+    case 'titlecase': {
+      return str.toLowerCase().replace(/(^|[\s([":/\u2013\u2014'-])(\p{L})/gu, (m, p1, p2) => p1 + p2.toUpperCase());
+    }
+    case 'original':
+    default:
+      return str;
+  }
+}
+
+function updateTitleCaseButtonsUI() {
+  if (!DOM.titleCharCaseGroup) return;
+  const currentCase = state.titleState.selectedCase || 'original';
+  const btns = DOM.titleCharCaseGroup.querySelectorAll('.char-case-btn');
+  btns.forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-case') === currentCase);
+  });
+}
+
 function renderTitleResults(titles) {
   if (!DOM.titleResultsList) return;
 
   DOM.titleResultsList.innerHTML = '';
+  const currentCase = state.titleState.selectedCase || 'original';
 
   titles.forEach((item, index) => {
     const card = document.createElement('div');
     card.className = 'title-card-item' + (item.isTopPick ? ' is-top-pick' : '');
 
     const num = index + 1;
-    const titleText = item.title;
-    const charLen = titleText.length;
+    const rawTitleText = item.title;
+    const formattedTitle = formatTitleWithCase(rawTitleText, currentCase);
+    const charLen = formattedTitle.length;
     const score = item.viralScore || Math.max(88, 98 - index);
     const timing = item.timing || (index % 2 === 0 ? 'Trending Hot' : 'Evergreen');
 
@@ -3400,7 +3492,7 @@ function renderTitleResults(titles) {
 
     const textP = document.createElement('p');
     textP.className = 'title-text-content';
-    textP.textContent = titleText;
+    textP.textContent = formattedTitle;
     textWrap.appendChild(textP);
 
     if (item.isTopPick && item.pickReason) {
@@ -3427,7 +3519,7 @@ function renderTitleResults(titles) {
 
     copyBtn.addEventListener('click', async () => {
       try {
-        await (navigator.clipboard?.writeText ? navigator.clipboard.writeText(titleText) : null);
+        await (navigator.clipboard?.writeText ? navigator.clipboard.writeText(formattedTitle) : null);
         copyBtn.classList.add('copied');
         copyBtn.innerHTML = `
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;">
@@ -3464,6 +3556,8 @@ function renderTitleResults(titles) {
   if (DOM.titleLoadingState) DOM.titleLoadingState.classList.add('hidden');
   if (DOM.titleResultsList) DOM.titleResultsList.classList.remove('hidden');
 
+  updateTitleCaseButtonsUI();
+
   if (DOM.titleCountPill) {
     DOM.titleCountPill.textContent = `${titles.length} / 5 tiêu đề`;
   }
@@ -3482,11 +3576,13 @@ async function copyAllTitlesToClipboard() {
     return;
   }
 
+  const currentCase = state.titleState.selectedCase || 'original';
   const formatted = state.titleState.titles
     .map((item, idx) => {
       const topMark = item.isTopPick ? ' [👑 TOP 1 ĐỀ XUẤT]' : '';
       const scoreMark = item.viralScore ? ` (CTR: ${item.viralScore}/100)` : '';
-      return `${idx + 1}.${topMark} [${item.angle}] ${item.title}${scoreMark}`;
+      const formattedTitle = formatTitleWithCase(item.title, currentCase);
+      return `${idx + 1}.${topMark} [${item.angle}] ${formattedTitle}${scoreMark}`;
     })
     .join('\n');
 
@@ -3519,6 +3615,9 @@ function updateDescInputCounts() {
   if (DOM.descContentWordCount) {
     DOM.descContentWordCount.textContent = `${contentWordCount.toLocaleString('vi-VN')} từ`;
   }
+
+  // Tự động nhận diện định dạng kịch bản (Kịch bản văn bản vs Phụ đề SRT)
+  autoDetectDescFormat(false);
 
   // Tự động nhận diện ngôn ngữ theo nội dung đầu vào (Input)
   autoDetectDescLanguage();
@@ -3642,9 +3741,51 @@ function checkDescReadiness() {
   }
 }
 
-function setDescMode(mode) {
+// Nhận diện tự động giữa Kịch bản văn bản thuần và Phụ đề SRT (Mốc giờ)
+function detectFormatFromText(text) {
+  if (!text || typeof text !== 'string') return null;
+  const clean = text.trim();
+  if (!clean) return null;
+  // Dấu hiệu nhận diện SRT / Subtitles: mốc timeline chứa mũi tên --> (00:00:01,000 --> 00:00:04,500 hoặc 00:01 --> 00:05)
+  const srtTimelineRegex = /\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?\s*-->\s*\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?/;
+  if (srtTimelineRegex.test(clean)) {
+    return 'srt';
+  }
+  return 'plain';
+}
+
+function autoDetectDescFormat(force = false) {
+  const contentText = (DOM.inputDescContent?.value || '').trim();
+
+  if (!contentText) {
+    state.descriptionState.isUserManualMode = false;
+    if (DOM.descFormatAutoBadge) {
+      DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện định dạng';
+      DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
+    }
+    if (state.descriptionState.mode !== 'plain') {
+      setDescMode('plain', false, false);
+    }
+    return;
+  }
+
+  if (state.descriptionState.isUserManualMode && !force) {
+    return;
+  }
+
+  const detected = detectFormatFromText(contentText);
+  if (detected && (force || detected !== state.descriptionState.mode)) {
+    setDescMode(detected, false, true);
+  }
+}
+
+function setDescMode(mode, fromUserClick = false, isAuto = false) {
   if (state.descriptionState.isGenerating) return;
   state.descriptionState.mode = mode;
+
+  if (fromUserClick) {
+    state.descriptionState.isUserManualMode = true;
+  }
 
   if (mode === 'plain') {
     if (DOM.btnModePlain) DOM.btnModePlain.classList.add('active');
@@ -3657,6 +3798,28 @@ function setDescMode(mode) {
     if (DOM.btnModePlain) DOM.btnModePlain.classList.remove('active');
     if (DOM.inputDescContent) {
       DOM.inputDescContent.placeholder = '';
+    }
+  }
+
+  if (DOM.descFormatAutoBadge) {
+    clearTimeout(state.descriptionState._autoFormatTimer);
+    if (isAuto) {
+      if (mode === 'srt') {
+        DOM.descFormatAutoBadge.textContent = '⚡ Nhận diện: Phụ đề SRT (Chapters)';
+        DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge detected-srt';
+      } else {
+        DOM.descFormatAutoBadge.textContent = '⚡ Nhận diện: Kịch bản văn bản';
+        DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge detected-plain';
+      }
+      state.descriptionState._autoFormatTimer = setTimeout(() => {
+        if (DOM.descFormatAutoBadge) {
+          DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
+          DOM.descFormatAutoBadge.textContent = mode === 'srt' ? '⏱️ Định dạng: Phụ đề SRT' : '📝 Định dạng: Kịch bản văn bản';
+        }
+      }, 2500);
+    } else if (fromUserClick) {
+      DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
+      DOM.descFormatAutoBadge.textContent = mode === 'srt' ? '🔒 Đã chọn: Phụ đề SRT' : '🔒 Đã chọn: Kịch bản văn bản';
     }
   }
 }
@@ -3673,7 +3836,8 @@ function loadSampleDescription() {
     nextSample = SAMPLE_DESC_DATA[0];
   }
 
-  setDescMode(nextSample.mode);
+  state.descriptionState.isUserManualMode = false;
+  setDescMode(nextSample.mode, false, true);
 
   if (DOM.inputDescTitle) {
     DOM.inputDescTitle.value = nextSample.title;
@@ -3715,11 +3879,8 @@ async function pasteDescContent() {
     const text = await navigator.clipboard.readText();
     if (text && DOM.inputDescContent) {
       DOM.inputDescContent.value = text;
-      // Auto-detect if user pastes SRT format (has "-->" or timestamp digits)
-      if (/-->\s*\d{2}:\d{2}/.test(text) && state.descriptionState.mode !== 'srt') {
-        setDescMode('srt');
-        showToast('Đã phát hiện định dạng SRT: Tự động chuyển sang chế độ Phụ đề SRT!', 'info', 2200);
-      }
+      state.descriptionState.isUserManualMode = false;
+      autoDetectDescFormat(true);
       updateDescInputCounts();
       showToast('Đã dán nội dung kịch bản!', 'success', 1200);
     }
@@ -3732,6 +3893,12 @@ function clearDescContent() {
   if (state.descriptionState.isGenerating) return;
   if (DOM.inputDescContent) {
     DOM.inputDescContent.value = '';
+    state.descriptionState.isUserManualMode = false;
+    setDescMode('plain', false, false);
+    if (DOM.descFormatAutoBadge) {
+      DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện định dạng';
+      DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
+    }
     updateDescInputCounts();
     DOM.inputDescContent.focus();
   }
@@ -3742,12 +3909,18 @@ function clearAllDescInputs() {
   clearDescTitle();
   clearDescContent();
   state.descriptionState.isUserManualLang = false;
+  state.descriptionState.isUserManualMode = false;
   state.descriptionState.descriptionText = '';
   state.descriptionState.tags = [];
   selectDescTargetLanguage('vi', false);
+  setDescMode('plain', false, false);
   if (DOM.descLangAutoBadge) {
     DOM.descLangAutoBadge.textContent = '⚡ Tự động nhận diện';
     DOM.descLangAutoBadge.classList.remove('detected');
+  }
+  if (DOM.descFormatAutoBadge) {
+    DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện định dạng';
+    DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
   }
   if (DOM.descOutputText) DOM.descOutputText.value = '';
   if (DOM.descTagsCloud) DOM.descTagsCloud.innerHTML = '';
