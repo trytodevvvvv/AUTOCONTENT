@@ -1277,10 +1277,10 @@ async function startGeneration() {
       updateHeaderActiveModel();
 
       if (mIdx > 0) {
-        DOM.outputStatusText.textContent = `Đang chuyển sang ${currentModel}...`;
-        showToast(`🔄 Model trước hết token/bận, tự động chuyển sang ${currentModel}...`, 'info');
+        DOM.outputStatusText.textContent = 'Đang chuyển kết nối dự phòng...';
+        showToast('🔄 Tự động chuyển sang kết nối dự phòng...', 'info');
       } else {
-        DOM.outputStatusText.textContent = `Đang kết nối API (${currentModel})...`;
+        DOM.outputStatusText.textContent = 'Đang viết kịch bản...';
       }
 
       const payload = {
@@ -1345,7 +1345,7 @@ async function startGeneration() {
         }
       }
 
-      DOM.outputStatusText.textContent = `Đang viết kịch bản (${currentModel})...`;
+      DOM.outputStatusText.textContent = 'Đang viết kịch bản...';
 
       // Handle Streaming Response (Server-Sent Events)
       const reader = response.body.getReader();
@@ -2589,6 +2589,74 @@ async function initUpdateSystem() {
   }
 }
 
+// Chuyển đổi nội dung ghi chú phiên bản (Markdown) thành cấu trúc hiển thị HTML sạch đẹp
+function renderReleaseNotes(container, rawText) {
+  if (!container) return;
+  if (!rawText || typeof rawText !== 'string') {
+    container.textContent = 'Phiên bản cải tiến hiệu năng và độ ổn định hệ thống.';
+    return;
+  }
+
+  const lines = rawText.split('\n');
+  const fragment = document.createDocumentFragment();
+
+  lines.forEach(rawLine => {
+    const line = rawLine.trim();
+    if (!line) return;
+
+    // Tiêu đề cấp 1 - 3 (## hoặc ###)
+    if (/^#{1,6}\s*/.test(line)) {
+      const headerText = line.replace(/^#{1,6}\s*/, '');
+      const hEl = document.createElement('div');
+      hEl.style.fontWeight = '700';
+      hEl.style.color = '#1E1B4B';
+      hEl.style.marginTop = '6px';
+      hEl.style.marginBottom = '3px';
+      hEl.textContent = headerText;
+      fragment.appendChild(hEl);
+      return;
+    }
+
+    // Các dòng gạch đầu dòng (-, *, +, •)
+    const isBullet = /^[-*+•]\s*/.test(line);
+    const textContent = line.replace(/^[-*+•]\s*/, '');
+    const pEl = document.createElement('div');
+    pEl.style.display = 'flex';
+    pEl.style.alignItems = 'flex-start';
+    pEl.style.gap = '6px';
+    pEl.style.marginBottom = '4px';
+
+    if (isBullet) {
+      const bullet = document.createElement('span');
+      bullet.textContent = '•';
+      bullet.style.color = '#6366F1';
+      bullet.style.fontWeight = 'bold';
+      bullet.style.flexShrink = '0';
+      pEl.appendChild(bullet);
+    }
+
+    const textSpan = document.createElement('span');
+    // Phân tích định dạng in đậm **chữ**
+    const parts = textContent.split(/(\*\*.*?\*\*)/g);
+    parts.forEach(part => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        const strong = document.createElement('strong');
+        strong.textContent = part.slice(2, -2);
+        strong.style.color = '#0F172A';
+        textSpan.appendChild(strong);
+      } else if (part) {
+        textSpan.appendChild(document.createTextNode(part));
+      }
+    });
+
+    pEl.appendChild(textSpan);
+    fragment.appendChild(pEl);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(fragment);
+}
+
 function handleUpdateDetected(updateData, isManual = false) {
   if (!updateData || !updateData.hasUpdate) return;
   if (!isManual && state.preferences?.system?.autoCheckUpdate === false) return;
@@ -2629,7 +2697,7 @@ function handleUpdateDetected(updateData, isManual = false) {
     DOM.updateCurrentVersionNote.textContent = `Phiên bản bạn đang dùng: ${updateData.currentVersion}`;
   }
   if (DOM.updateChangelogContent) {
-    DOM.updateChangelogContent.textContent = updateData.releaseNotes || 'Phiên bản cải tiến hiệu năng và độ ổn định hệ thống.';
+    renderReleaseNotes(DOM.updateChangelogContent, updateData.releaseNotes);
   }
 
   if (DOM.updateNotificationModal) {
@@ -3152,8 +3220,8 @@ Hãy phân tích tâm lý người xem và tạo đúng 5 TIÊU ĐỀ YOUTUBE TI
 
       if (DOM.titleLoadingText) {
         DOM.titleLoadingText.textContent = mIdx > 0
-          ? `🔄 Chuyển sang ${currentModel}: Đang tạo 10 tiêu đề tối ưu...`
-          : `Đang kết nối ${currentModel} & bóc tách tâm lý YouTube...`;
+          ? '🔄 Đang chuyển kết nối dự phòng & bóc tách tâm lý YouTube...'
+          : 'Đang bóc tách tâm lý YouTube...';
       }
 
       const payload = {
@@ -3760,7 +3828,7 @@ function autoDetectDescFormat(force = false) {
   if (!contentText) {
     state.descriptionState.isUserManualMode = false;
     if (DOM.descFormatAutoBadge) {
-      DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện định dạng';
+      DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện';
       DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
     }
     if (state.descriptionState.mode !== 'plain') {
@@ -3805,21 +3873,21 @@ function setDescMode(mode, fromUserClick = false, isAuto = false) {
     clearTimeout(state.descriptionState._autoFormatTimer);
     if (isAuto) {
       if (mode === 'srt') {
-        DOM.descFormatAutoBadge.textContent = '⚡ Nhận diện: Phụ đề SRT (Chapters)';
+        DOM.descFormatAutoBadge.textContent = '⚡ Nhận diện: SRT Chapters';
         DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge detected-srt';
       } else {
-        DOM.descFormatAutoBadge.textContent = '⚡ Nhận diện: Kịch bản văn bản';
+        DOM.descFormatAutoBadge.textContent = '⚡ Nhận diện: Văn bản';
         DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge detected-plain';
       }
       state.descriptionState._autoFormatTimer = setTimeout(() => {
         if (DOM.descFormatAutoBadge) {
           DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
-          DOM.descFormatAutoBadge.textContent = mode === 'srt' ? '⏱️ Định dạng: Phụ đề SRT' : '📝 Định dạng: Kịch bản văn bản';
+          DOM.descFormatAutoBadge.textContent = mode === 'srt' ? '⏱️ Định dạng: SRT' : '📝 Định dạng: Văn bản';
         }
       }, 2500);
     } else if (fromUserClick) {
       DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
-      DOM.descFormatAutoBadge.textContent = mode === 'srt' ? '🔒 Đã chọn: Phụ đề SRT' : '🔒 Đã chọn: Kịch bản văn bản';
+      DOM.descFormatAutoBadge.textContent = mode === 'srt' ? '🔒 Đã chọn: SRT' : '🔒 Đã chọn: Văn bản';
     }
   }
 }
@@ -3896,7 +3964,7 @@ function clearDescContent() {
     state.descriptionState.isUserManualMode = false;
     setDescMode('plain', false, false);
     if (DOM.descFormatAutoBadge) {
-      DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện định dạng';
+      DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện';
       DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
     }
     updateDescInputCounts();
@@ -3919,7 +3987,7 @@ function clearAllDescInputs() {
     DOM.descLangAutoBadge.classList.remove('detected');
   }
   if (DOM.descFormatAutoBadge) {
-    DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện định dạng';
+    DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện';
     DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
   }
   if (DOM.descOutputText) DOM.descOutputText.value = '';
@@ -4129,8 +4197,8 @@ Hãy tạo Mô tả SEO tối ưu và danh sách Tags phong cách vidIQ theo đ�
 
       if (DOM.descLoadingText) {
         DOM.descLoadingText.textContent = mIdx > 0
-          ? `🔄 Chuyển sang ${currentModel}: Đang tối ưu mô tả & tính điểm tags...`
-          : `Đang kết nối ${currentModel} & tối ưu SEO YouTube vidIQ...`;
+          ? '🔄 Đang chuyển kết nối dự phòng & tối ưu SEO YouTube...'
+          : 'Đang tối ưu SEO YouTube & Tags...';
       }
 
       const payload = {

@@ -694,11 +694,65 @@
                   </div>
                 </div>
 
-                <!-- KHỐI 2: NGÔN NGỮ MỤC TIÊU (8 NGÔN NGỮ ĐỒNG BỘ INPUT / OUTPUT) -->
+                <!-- KHỐI 2: CHỌN DẠNG KỊCH BẢN & NỘI DUNG (DÁN TRỰC TIẾP) -->
                 <div class="desc-card-box">
                   <div class="desc-card-header">
                     <div class="desc-card-title-group">
                       <span class="desc-card-step">2</span>
+                      <label class="desc-card-title" for="inputDescContent">Nội dung kịch bản</label>
+                      <span class="desc-format-autodetect-badge" id="descFormatAutoBadge" title="Tự động nhận diện kịch bản văn bản hoặc phụ đề SRT">⚡ Tự nhận diện</span>
+                    </div>
+                    <div class="desc-card-actions">
+                      <button class="btn-mini-action" id="btnPasteDescContent" title="Dán nội dung từ Clipboard" type="button">Dán</button>
+                      <button class="btn-mini-action danger" id="btnClearDescContent" title="Xóa nội dung kịch bản" type="button">Xóa</button>
+                    </div>
+                  </div>
+
+                  <!-- Segmented Toggle Mode Selector -->
+                  <div class="desc-mode-toggle">
+                    <button class="desc-toggle-btn active" id="btnModePlain" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                      </svg>
+                      <span>Kịch bản văn bản</span>
+                    </button>
+                    <button class="desc-toggle-btn" id="btnModeSrt" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                      </svg>
+                      <span>Phụ đề SRT (Mốc giờ)</span>
+                      <span class="badge-srt-pill">Chapters</span>
+                    </button>
+                  </div>
+
+                  <!-- Textarea Dán nội dung -->
+                  <div class="desc-textarea-wrapper">
+                    <textarea 
+                      id="inputDescContent" 
+                      class="desc-content-input" 
+                      placeholder=""
+                      rows="8"
+                      spellcheck="false"
+                    ></textarea>
+                  </div>
+                  <div class="desc-input-footer">
+                    <div class="desc-counts-group">
+                      <span id="descContentCharCount">0 ký tự</span>
+                      <span class="count-divider">•</span>
+                      <span id="descContentWordCount">0 từ</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- KHỐI 3: NGÔN NGỮ MỤC TIÊU (8 NGÔN NGỮ ĐỒNG BỘ INPUT / OUTPUT) -->
+                <div class="desc-card-box">
+                  <div class="desc-card-header">
+                    <div class="desc-card-title-group">
+                      <span class="desc-card-step">3</span>
                       <label class="desc-card-title desc-gradient-title">Ngôn ngữ mục tiêu (Target Language)</label>
                     </div>
                     <span class="desc-lang-autodetect-badge" id="descLangAutoBadge" title="Tự động phát hiện theo ngôn ngữ đầu vào">⚡ Tự động nhận diện</span>
@@ -736,60 +790,6 @@
                       <span class="lang-tag">BR</span>
                       <span class="lang-name">Brasil (BR)</span>
                     </button>
-                  </div>
-                </div>
-
-                <!-- KHỐI 3: CHỌN DẠNG KỊCH BẢN & NỘI DUNG (DÁN TRỰC TIẾP) -->
-                <div class="desc-card-box">
-                  <div class="desc-card-header">
-                    <div class="desc-card-title-group">
-                      <span class="desc-card-step">3</span>
-                      <label class="desc-card-title" for="inputDescContent">Nội dung kịch bản (Dán trực tiếp)</label>
-                      <span class="desc-format-autodetect-badge" id="descFormatAutoBadge" title="Tự động nhận diện kịch bản văn bản hoặc phụ đề SRT">⚡ Tự nhận diện định dạng</span>
-                    </div>
-                    <div class="desc-card-actions">
-                      <button class="btn-mini-action" id="btnPasteDescContent" title="Dán nội dung từ Clipboard" type="button">Dán</button>
-                      <button class="btn-mini-action danger" id="btnClearDescContent" title="Xóa nội dung kịch bản" type="button">Xóa</button>
-                    </div>
-                  </div>
-
-                  <!-- Segmented Toggle Mode Selector -->
-                  <div class="desc-mode-toggle">
-                    <button class="desc-toggle-btn active" id="btnModePlain" type="button">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                      </svg>
-                      <span>📝 Kịch bản văn bản</span>
-                    </button>
-                    <button class="desc-toggle-btn" id="btnModeSrt" type="button">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                      </svg>
-                      <span>⏱️ Phụ đề SRT (Mốc giờ)</span>
-                      <span class="badge-srt-pill">Chapters</span>
-                    </button>
-                  </div>
-
-                  <!-- Textarea Dán nội dung -->
-                  <div class="desc-textarea-wrapper">
-                    <textarea 
-                      id="inputDescContent" 
-                      class="desc-content-input" 
-                      placeholder=""
-                      rows="8"
-                      spellcheck="false"
-                    ></textarea>
-                  </div>
-                  <div class="desc-input-footer">
-                    <div class="desc-counts-group">
-                      <span id="descContentCharCount">0 ký tự</span>
-                      <span class="count-divider">•</span>
-                      <span id="descContentWordCount">0 từ</span>
-                    </div>
                   </div>
                 </div>
               </div>
