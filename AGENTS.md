@@ -98,8 +98,14 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
        * *Cách thực hiện*: Truy cập `https://github.com/trytodevvvvv/AUTOCONTENT/releases/new`, chọn tag `vX.Y.Z`, đặt tiêu đề `AutoContent Studio vX.Y.Z`, điền ghi chú tóm tắt và bấm **Publish release** (hoặc gọi API tạo release qua token máy dev).
    * **Bước 4 (Phân phối tự động OTA)**:
      * Toàn bộ máy người dùng khi mở ứng dụng hoặc bấm "Kiểm tra cập nhật" sẽ nhận được thông báo bản mới ngay lập tức.
-3. **Mệnh lệnh kích hoạt phát hành (Release Trigger Command)**:
-   * Bất cứ khi nào người dùng yêu cầu: *"Đẩy code lên GitHub"*, *"Update code lên GitHub"*, *"Đẩy GitHub"* hay *"Xác nhận phát hành"*, AI **bắt buộc mặc định tự ngầm hiểu là thực thi toàn bộ Quy trình 4 bước của LUẬT 5** (tự động nâng version trong `package.json`, stage an toàn, commit, push main, tạo tag và publish GitHub Release).
+3. **Mệnh lệnh kích hoạt phát hành & Bắt buộc tạo Release (Release Trigger & Mandatory Release Policy)**:
+   * Bất cứ khi nào người dùng yêu cầu: *"Đẩy code lên GitHub"*, *"Update code lên GitHub"*, *"Đẩy GitHub"* hay *"Xác nhận phát hành"*, AI **bắt buộc mặc định tự ngầm hiểu là thực thi toàn bộ Quy trình của LUẬT 5**, trong đó **BƯỚC TẠO VÀ XUẤT BẢN GITHUB RELEASE LÀ BẮT BUỘC 100%**:
+     * **1. Nâng version**: Nâng phiên bản tương ứng trong `package.json`.
+     * **2. Stage an toàn & Commit**: Kiểm tra rò rỉ và commit mã nguồn.
+     * **3. Push main & Push Git Tag**: `git push origin main` và `git push origin vX.Y.Z`.
+     * **4. BẮT BUỘC TẠO BẢN GITHUB RELEASE (KHÔNG ĐƯỢC BỎ QUA)**:
+       * *Lý do kỹ thuật sống còn*: API kiểm tra cập nhật trên các máy người dùng khác truy vấn endpoint `/repos/.../releases/latest`. Nếu không Publish Release chính thức trên GitHub, các máy khác sẽ KHÔNG nhận diện được bản cập nhật mới và tiếp tục bị kẹt ở phiên bản cũ.
+       * *Hành động bắt buộc*: Ngay sau khi push tag, AI bắt buộc phải tạo bản Release (hoặc cung cấp ngay đường link phát hành 1-click đã điền sẵn tag & tiêu đề: `https://github.com/trytodevvvvv/AUTOCONTENT/releases/new?tag=vX.Y.Z&title=AutoContent+Studio+vX.Y.Z`) và đồng hành cùng người dùng hoàn tất việc xuất bản Release. Lệnh "đẩy code lên github" chỉ được coi là hoàn thành khi bản Release đã lên sóng.
 
 ---
 

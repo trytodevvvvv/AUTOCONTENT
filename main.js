@@ -582,45 +582,51 @@ function fetchLatestGithubRelease() {
 async function checkAppUpdates(manual = false) {
   const currentVersion = getCurrentlyRunningVersion();
   try {
-    const release = await fetchLatestGithubRelease().catch(() => null);
+    const [release, latestTag, remotePkg] = await Promise.all([
+      fetchLatestGithubRelease().catch(() => null),
+      fetchLatestGithubTag().catch(() => null),
+      fetchRemotePackageJson().catch(() => null)
+    ]);
+
     let latestVersion = '';
     let releaseName = '';
     let releaseNotes = '';
     let downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
     let zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/main`;
 
-    if (release && release.tag_name) {
-      latestVersion = release.tag_name.replace(/^v/i, '');
-      releaseName = release.name || `Bản phát hành v${latestVersion}`;
-      releaseNotes = release.body || 'Phiên bản cải tiến hiệu năng và tính năng mới.';
-      downloadUrl = release.html_url;
+    const releaseVer = (release && release.tag_name) ? release.tag_name.replace(/^v/i, '') : '';
+    const tagVer = (latestTag && latestTag.name) ? latestTag.name.replace(/^v/i, '') : '';
+    const pkgVer = (remotePkg && remotePkg.version) ? remotePkg.version.replace(/^v/i, '') : '';
 
-      if (Array.isArray(release.assets) && release.assets.length > 0) {
-        const exeAsset = release.assets.find(a => a.name && a.name.toLowerCase().endsWith('.exe'));
-        if (exeAsset && exeAsset.browser_download_url) {
-          downloadUrl = exeAsset.browser_download_url;
+    let bestVer = '';
+    if (releaseVer) bestVer = releaseVer;
+    if (tagVer && (!bestVer || compareVersions(tagVer, bestVer) > 0)) bestVer = tagVer;
+    if (pkgVer && (!bestVer || compareVersions(pkgVer, bestVer) > 0)) bestVer = pkgVer;
+
+    if (bestVer) {
+      latestVersion = bestVer;
+      if (releaseVer === bestVer && release) {
+        releaseName = release.name || `Bản phát hành v${latestVersion}`;
+        releaseNotes = release.body || 'Phiên bản cải tiến hiệu năng và tính năng mới.';
+        downloadUrl = release.html_url;
+
+        if (Array.isArray(release.assets) && release.assets.length > 0) {
+          const exeAsset = release.assets.find(a => a.name && a.name.toLowerCase().endsWith('.exe'));
+          if (exeAsset && exeAsset.browser_download_url) {
+            downloadUrl = exeAsset.browser_download_url;
+          }
         }
-      }
-      zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/${release.tag_name}`;
-    } else {
-      // 1st Fallback: Check newest Git Tag directly
-      const latestTag = await fetchLatestGithubTag().catch(() => null);
-      if (latestTag && latestTag.name) {
-        latestVersion = latestTag.name.replace(/^v/i, '');
+        zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/${release.tag_name}`;
+      } else if (tagVer === bestVer && latestTag) {
         releaseName = `Bản cập nhật v${latestVersion}`;
         releaseNotes = 'Cập nhật trực tiếp mã nguồn mới nhất từ kho lưu trữ GitHub.';
         downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/tag/${latestTag.name}`;
         zipUrl = latestTag.zipball_url || `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/${latestTag.name}`;
       } else {
-        // 2nd Fallback: Check package.json on main branch directly (cache-busting)
-        const remotePkg = await fetchRemotePackageJson();
-        if (remotePkg && remotePkg.version) {
-          latestVersion = remotePkg.version;
-          releaseName = `Bản cập nhật mã nguồn v${latestVersion}`;
-          releaseNotes = 'Cập nhật trực tiếp mã nguồn mới nhất từ kho lưu trữ GitHub.';
-          downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
-          zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/main`;
-        }
+        releaseName = `Bản cập nhật mã nguồn v${latestVersion}`;
+        releaseNotes = 'Cập nhật trực tiếp mã nguồn mới nhất từ kho lưu trữ GitHub.';
+        downloadUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
+        zipUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/zipball/main`;
       }
     }
 

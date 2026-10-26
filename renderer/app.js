@@ -3227,7 +3227,7 @@ async function startTitleGeneration() {
   const systemPrompt = `Bạn là Chuyên gia hàng đầu thế giới về Tối ưu hóa Tiêu đề YouTube (YouTube Title Strategist & CTR Master) với hơn 10 năm kinh nghiệm nghiên cứu thuật toán đề xuất và tâm lý học người xem YouTube (YouTube Viewer Psychology).
 NGỮ CẢNH THỜI GIAN THỰC HIỆN TẠI: ${dateStr}.
 
-Nhiệm vụ của bạn: Từ tiêu đề gốc duy nhất do người dùng cung cấp, hãy đào sâu bóc tách khoảng trống tò mò (Curiosity Gap) và tâm lý người xem ở thời điểm hiện tại (${dateStr}) để sáng tạo đúng 5 TIÊU ĐỀ YOUTUBE TINH HOA ĐỘT PHÁ NHẤT bằng ngôn ngữ mục tiêu: ${targetLangObj.name}.
+Nhiệm vụ của bạn: Từ tiêu đề gốc do người dùng cung cấp, hãy đào sâu bóc tách khoảng trống tò mò (Curiosity Gap) và tâm lý người xem ở thời điểm hiện tại (${dateStr}) để sáng tạo đúng 5 TIÊU ĐỀ YOUTUBE TINH HOA ĐỘT PHÁ NHẤT bằng ngôn ngữ mục tiêu: ${targetLangObj.name}.
 
 QUY TẮC BẮT BUỘC (MA TRẬN 5 VŨ KHÍ CTR CHIỀU SÂU):
 Toàn bộ tiêu đề tạo ra phải bằng 100% ${targetLangObj.name} (${targetLangObj.promptDesc}), độ dài tối ưu chuẩn YouTube Mobile (40 - 65 ký tự, không bị cắt dấu ba chấm).
@@ -3241,8 +3241,11 @@ Mỗi tiêu đề đại diện cho đúng 1 vũ khí tâm lý độc lập:
 VIRAL SCORE (88 - 99): Chấm điểm tiềm năng CTR ước tính cho từng tiêu đề theo thang 100.
 PHÂN LOẠI THỜI ĐIỂM ("timing"): "Trending Hot" (thời sự bùng nổ) hoặc "Evergreen" (bền vững).
 
-ĐỊNH DẠNG ĐẦU RA (OUTPUT FORMAT):
-BẮT BUỘC trả về đúng định dạng mảng JSON thuần túy gồm ĐÚNG 5 PHẦN TỬ (không viết văn xuôi hay chào hỏi ngoài JSON):
+QUY ĐỊNH ĐỊNH DẠNG ĐẦU RA (OUTPUT FORMAT - BẮT BUỘC):
+- BẮT BUỘC trả về DUY NHẤT 1 mảng JSON thuần túy bắt đầu bằng ký tự [ và kết thúc bằng ký tự ].
+- TUYỆT ĐỐI KHÔNG bọc mảng trong Object {} (không tạo các key như "audience_psychology", "demographics", "pain_points", "analysis").
+- Quá trình phân tích tâm lý người xem là bước tư duy ngầm (internal reasoning), TUYỆT ĐỐI KHÔNG in kết quả phân tích tâm lý ra ngoài.
+- Chỉ in mảng JSON đúng 5 phần tử:
 [
   {
     "angle": "Tò mò tột độ",
@@ -3283,7 +3286,7 @@ BẮT BUỘC trả về đúng định dạng mảng JSON thuần túy gồm Đ�
 ]`;
 
   const userPrompt = `Thời điểm hiện tại: ${dateStr}. Tiêu đề gốc / Chủ đề video: "${rawInput}".
-Hãy phân tích tâm lý người xem và tạo đúng 5 TIÊU ĐỀ YOUTUBE TINH HOA NHẤT bằng ${targetLangObj.name} theo đúng định dạng JSON yêu cầu. Chọn ra đúng 1 tiêu đề "isTopPick": true với "pickReason".`;
+Dựa trên phân tích tâm lý người xem, hãy sáng tạo và xuất ra đúng 5 TIÊU ĐỀ YOUTUBE TINH HOA NHẤT bằng ${targetLangObj.name} dưới dạng duy nhất một mảng JSON [ ... ] theo đúng định dạng yêu cầu. Chọn ra đúng 1 tiêu đề "isTopPick": true với "pickReason". Không in thêm bất kỳ văn bản nào ngoài mảng JSON.`;
 
   setTitleGeneratingUIState(true);
   state.titleState.abortController = new AbortController();
@@ -3413,69 +3416,157 @@ Hãy phân tích tâm lý người xem và tạo đúng 5 TIÊU ĐỀ YOUTUBE TI
   }
 }
 
-function parseTitlesFromResponse(rawText) {
-  let cleanText = rawText.trim();
+function isLikelyJsonLine(str) {
+  if (!str) return true;
+  const s = str.trim();
+  if (s.startsWith('{') || s.startsWith('}') || s.startsWith('[') || s.startsWith(']') || s.startsWith('`')) return true;
+  // Key-value pair with colon e.g. "demographics": or "audience_psychology": {
+  if (/^["']?[\w_-]+["']?\s*:\s*[{["']?/.test(s)) return true;
+  // Technical schema keys
+  if (/["'](audience_psychology|demographics|pain_points|curiosity_gap|viralScore|isTopPick|pickReason|timing|angle)["']/i.test(s)) return true;
+  // Trailing comma or colon on json lines
+  if (/,\s*$/.test(s) && (s.includes(':') || s.includes('"'))) return true;
+  if (/[{}[\]]/.test(s) && (s.includes(':') || s.includes('"'))) return true;
+  return false;
+}
 
-  // Try extracting JSON from markdown code block ```json ... ```
+function cleanTitleString(str) {
+  if (!str) return '';
+  return str
+    .replace(/^["'“”«»]+|["'“”«»]+$/g, '')
+    .replace(/^\d+[\.\-\)]\s*/, '')
+    .replace(/^[#\*\-]+\s*/, '')
+    .trim();
+}
+
+function normalizeTitleItems(rawArray) {
+  if (!Array.isArray(rawArray) || rawArray.length === 0) return [];
+  let hasTopPick = false;
+
+  const validItems = rawArray.map((item, idx) => {
+    if (typeof item === 'string') {
+      const cleanT = cleanTitleString(item);
+      if (!cleanT || isLikelyJsonLine(cleanT) || cleanT.length < 5) return null;
+      return {
+        angle: 'Tối ưu CTR',
+        title: cleanT,
+        viralScore: Math.max(88, 98 - Math.min(idx * 2, 10)),
+        timing: idx % 2 === 0 ? 'Trending Hot' : 'Evergreen',
+        isTopPick: idx === 0,
+        pickReason: idx === 0 ? 'Đánh trúng khoảng trống tò mò lớn nhất và kích thích nhấp chuột mạnh mẽ.' : ''
+      };
+    }
+
+    if (typeof item !== 'object' || item === null) return null;
+
+    const rawTitle = item.title || item.text || item.content || item.name || '';
+    const cleanT = cleanTitleString(rawTitle);
+    if (!cleanT || isLikelyJsonLine(cleanT) || cleanT.length < 5) return null;
+
+    const isTop = Boolean(item.isTopPick);
+    if (isTop) hasTopPick = true;
+
+    let score = parseInt(item.viralScore, 10);
+    if (isNaN(score) || score < 50 || score > 100) {
+      score = Math.max(88, 98 - Math.min(idx, 9));
+    }
+
+    let timing = item.timing;
+    if (timing !== 'Trending Hot' && timing !== 'Evergreen') {
+      timing = idx % 2 === 0 ? 'Trending Hot' : 'Evergreen';
+    }
+
+    return {
+      angle: item.angle || item.type || item.style || 'Tối ưu CTR',
+      title: cleanT,
+      viralScore: score,
+      timing: timing,
+      isTopPick: isTop,
+      pickReason: item.pickReason || ''
+    };
+  }).filter(Boolean);
+
+  if (validItems.length > 0 && !hasTopPick) {
+    validItems[0].isTopPick = true;
+    if (!validItems[0].pickReason) {
+      validItems[0].pickReason = 'Đánh trúng khoảng trống tò mò lớn nhất và kích thích nhấp chuột mạnh mẽ.';
+    }
+  }
+
+  return validItems;
+}
+
+function parseTitlesFromResponse(rawText) {
+  let cleanText = (rawText || '').trim();
+
+  // 1. Try extracting JSON from markdown code block ```json ... ```
   const jsonMatch = cleanText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (jsonMatch && jsonMatch[1]) {
     cleanText = jsonMatch[1].trim();
   }
 
-  // Attempt 1: Standard JSON parse
+  // Attempt 1: Direct JSON.parse
   try {
     const parsed = JSON.parse(cleanText);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      let hasTopPick = false;
-      const list = parsed.map((item, idx) => {
-        if (typeof item === 'string') {
-          return {
-            angle: 'Tối ưu CTR',
-            title: cleanTitleString(item),
-            viralScore: Math.max(88, 98 - Math.min(idx * 2, 10)),
-            timing: idx % 2 === 0 ? 'Trending Hot' : 'Evergreen',
-            isTopPick: idx === 0,
-            pickReason: idx === 0 ? 'Đánh trúng khoảng trống tò mò lớn nhất và kích thích nhấp chuột mạnh mẽ.' : ''
-          };
-        }
-
-        const isTop = Boolean(item.isTopPick);
-        if (isTop) hasTopPick = true;
-
-        let score = parseInt(item.viralScore, 10);
-        if (isNaN(score) || score < 50 || score > 100) {
-          score = Math.max(88, 98 - Math.min(idx, 9));
-        }
-
-        let timing = item.timing;
-        if (timing !== 'Trending Hot' && timing !== 'Evergreen') {
-          timing = idx % 2 === 0 ? 'Trending Hot' : 'Evergreen';
-        }
-
-        return {
-          angle: item.angle || item.type || item.style || 'Tối ưu CTR',
-          title: cleanTitleString(item.title || item.text || item.content || ''),
-          viralScore: score,
-          timing: timing,
-          isTopPick: isTop,
-          pickReason: item.pickReason || ''
-        };
-      }).filter(t => Boolean(t.title));
-
-      if (!hasTopPick && list.length > 0) {
-        list[0].isTopPick = true;
-        if (!list[0].pickReason) {
-          list[0].pickReason = 'Đánh trúng khoảng trống tò mò lớn nhất và kích thích nhấp chuột mạnh mẽ.';
+    if (Array.isArray(parsed)) {
+      const items = normalizeTitleItems(parsed);
+      if (items.length > 0) return items.slice(0, 5);
+    } else if (typeof parsed === 'object' && parsed !== null) {
+      // If AI wrapped in object like { "audience_psychology": ..., "titles": [ ... ] }
+      const candidateKeys = ['titles', 'items', 'data', 'results', 'list', 'tieu_de', 'output', 'suggestions', 'ideas'];
+      for (const k of candidateKeys) {
+        if (Array.isArray(parsed[k])) {
+          const items = normalizeTitleItems(parsed[k]);
+          if (items.length > 0) return items.slice(0, 5);
         }
       }
-
-      return list.slice(0, 5);
+      // Check any other key holding an array of objects
+      for (const val of Object.values(parsed)) {
+        if (Array.isArray(val) && val.length > 0) {
+          const items = normalizeTitleItems(val);
+          if (items.length > 0) return items.slice(0, 5);
+        }
+      }
     }
   } catch (e) {
-    // Proceed to fallback
+    // Proceed to next attempt
   }
 
-  // Attempt 2: Regex Fallback - match numbered lines like:
+  // Attempt 2: Extract JSON array or object substring via regex
+  try {
+    const arrayMatch = cleanText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if (arrayMatch) {
+      const parsed = JSON.parse(arrayMatch[0]);
+      if (Array.isArray(parsed)) {
+        const items = normalizeTitleItems(parsed);
+        if (items.length > 0) return items.slice(0, 5);
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const objMatch = cleanText.match(/\{[\s\S]*\}/);
+    if (objMatch) {
+      const parsed = JSON.parse(objMatch[0]);
+      if (typeof parsed === 'object' && parsed !== null) {
+        const candidateKeys = ['titles', 'items', 'data', 'results', 'list', 'tieu_de', 'output'];
+        for (const k of candidateKeys) {
+          if (Array.isArray(parsed[k])) {
+            const items = normalizeTitleItems(parsed[k]);
+            if (items.length > 0) return items.slice(0, 5);
+          }
+        }
+        for (const val of Object.values(parsed)) {
+          if (Array.isArray(val) && val.length > 0) {
+            const items = normalizeTitleItems(val);
+            if (items.length > 0) return items.slice(0, 5);
+          }
+        }
+      }
+    }
+  } catch (e) {}
+
+  // Attempt 3: Regex Fallback - match numbered lines like:
   // 1. [Tò mò] Tiêu đề...
   // 1. "Tiêu đề..."
   // 1. Tiêu đề...
@@ -3484,14 +3575,13 @@ function parseTitlesFromResponse(rawText) {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) continue;
+    if (!trimmed || isLikelyJsonLine(trimmed)) continue;
 
-    // Pattern: 1. [Angle] Title or 1. Title
     const match = trimmed.match(/^(\d+)[\.\-\)]\s*(?:\[([^\]]+)\])?\s*(.*)$/);
     if (match) {
       const angle = match[2] ? match[2].trim() : 'Tối ưu CTR';
       const title = cleanTitleString(match[3]);
-      if (title) {
+      if (title && !isLikelyJsonLine(title) && title.length >= 5) {
         const idx = fallbackList.length;
         fallbackList.push({
           angle,
@@ -3509,10 +3599,10 @@ function parseTitlesFromResponse(rawText) {
     return fallbackList.slice(0, 5);
   }
 
-  // Attempt 3: Any non-empty lines
+  // Attempt 4: Natural text lines (Strictly exclude any JSON/Markdown code fragments)
   const rawLines = lines
     .map(l => cleanTitleString(l))
-    .filter(l => l && l.length > 10 && !l.startsWith('{') && !l.startsWith('[') && !l.startsWith('`'));
+    .filter(l => l && l.length > 10 && !isLikelyJsonLine(l));
 
   return rawLines.slice(0, 5).map((t, idx) => ({
     angle: 'Tối ưu CTR',
@@ -3522,14 +3612,6 @@ function parseTitlesFromResponse(rawText) {
     isTopPick: idx === 0,
     pickReason: idx === 0 ? 'Đánh trúng khoảng trống tò mò lớn nhất và kích thích nhấp chuột mạnh mẽ.' : ''
   }));
-}
-
-function cleanTitleString(str) {
-  if (!str) return '';
-  return str
-    .replace(/^["'“”«»]+|["'“”«»]+$/g, '')
-    .replace(/^\d+[\.\-\)]\s*/, '')
-    .trim();
 }
 
 function formatTitleWithCase(str, caseType) {
