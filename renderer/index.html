@@ -58,6 +58,18 @@
             </div>
             <span class="sidebar-label">Mô tả</span>
           </button>
+
+          <!-- Module 4: Gem (AI Custom Skills & Chatbot Studio) -->
+          <button class="sidebar-nav-btn" id="btnNavGem" title="Gem AI Studio - Trợ lý thông minh & Chỉ dẫn tùy chỉnh" type="button">
+            <div class="sidebar-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 3h12l4 6-10 13L2 9z"></path>
+                <path d="M11 3v8l-7-2"></path>
+                <path d="M13 3v8l7-2"></path>
+              </svg>
+            </div>
+            <span class="sidebar-label">Gem</span>
+          </button>
         </div>
 
         <!-- Bottom Navigation Utilities -->
@@ -927,7 +939,105 @@
           </main>
         </div>
 
-        <!-- VIEW 4: TRUNG TÂM CÀI ĐẶT HỆ THỐNG (FULL VIEW) -->
+        <!-- VIEW 4: GEM AI STUDIO (AI CUSTOM SKILLS & CHATBOT WORKSPACE) -->
+        <div class="stage-view hidden" id="viewGemStudio">
+          <div class="gem-studio-container">
+            <!-- Gem Top Control Bar -->
+            <div class="gem-studio-header">
+              <div class="gem-header-left">
+                <div class="gem-title-row">
+                  <span class="gem-brand-badge">Gem Studio</span>
+                  <span class="gem-path-text">Trợ lý AI & Chỉ dẫn chuyên sâu</span>
+                </div>
+                <h2 class="gem-view-title">Gem AI Chatbot</h2>
+              </div>
+
+              <div class="gem-header-right">
+                <!-- Nút Cuộc trò chuyện mới -->
+                <button class="btn-gem-new-chat" id="btnGemNewChat" type="button" title="Bắt đầu đoạn chat mới">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  <span>Đoạn chat mới</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Gem Chat Stream Area -->
+            <div class="gem-chat-scroll" id="gemChatScroll">
+              <!-- Blank State per LUẬT 9 -->
+              <div class="gem-chat-blank" id="gemChatBlank">
+                <div class="gem-blank-icon">💎</div>
+                <h3 class="gem-blank-title">Chào bạn, tôi có thể hỗ trợ gì cho nội dung YouTube hôm nay?</h3>
+                <p class="gem-blank-desc">Gõ tin nhắn để bắt đầu hoặc gõ <kbd>/</kbd> để gọi nhanh một Gem với chỉ dẫn chuyên sâu đã học sẵn.</p>
+                <div class="gem-starter-chips" id="gemStarterChips">
+                  <!-- Starter chip suggestions rendered dynamically -->
+                </div>
+              </div>
+
+              <!-- Message Bubbles Container -->
+              <div class="gem-messages-list" id="gemMessagesList">
+                <!-- User & AI chat messages rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Gem Bottom Input Area -->
+            <div class="gem-chat-footer">
+              <!-- Slash command autocomplete popover -->
+              <div class="gem-slash-popover hidden" id="gemSlashPopover">
+                <div class="gem-slash-popover-header">
+                  <span>💎 DANH SÁCH GEM (GÕ ĐỂ LỌC, PHÍM MŨI TÊN ĐỂ CHỌN)</span>
+                </div>
+                <div class="gem-slash-items" id="gemSlashItems">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+
+              <!-- Input Box -->
+              <div class="gem-input-box">
+                <!-- Context Badge Bar when Gem instruction is active -->
+                <div class="gem-input-context-bar hidden" id="gemInputContextBar">
+                  <div class="gem-context-pill">
+                    <span class="gem-context-icon" id="gemContextIcon">💎</span>
+                    <span class="gem-context-name" id="gemContextName">Chỉ dẫn Gem</span>
+                  </div>
+                  <button type="button" class="btn-clear-gem-instruction" id="btnClearGemInstruction" title="Xóa chỉ dẫn, quay về chat bình thường">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                    <span>Hủy chỉ dẫn</span>
+                  </button>
+                </div>
+
+                <!-- Textarea Editor Area (Full Width, Auto-Expands Vertically) -->
+                <textarea 
+                  id="inputGemChat" 
+                  class="gem-chat-textarea" 
+                  placeholder="Gửi tin nhắn cho AI... (Gõ / để gọi nhanh một Gem)" 
+                  rows="1" 
+                  spellcheck="false"
+                ></textarea>
+
+                <!-- Inside Bottom Action Bar -->
+                <div class="gem-input-bottom-bar">
+                  <div class="gem-input-hint">
+                    <span>Nhấn <strong>Enter</strong> để gửi • <strong>Shift + Enter</strong> xuống dòng</span>
+                  </div>
+                  <button class="btn-gem-send" id="btnGemSend" type="button" title="Gửi tin nhắn (Enter)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 5: TRUNG TÂM CÀI ĐẶT HỆ THỐNG (FULL VIEW) -->
         <div class="stage-view hidden" id="viewSettings">
           <div class="settings-view-container">
             <!-- Settings Header Bar -->
@@ -968,6 +1078,15 @@
                   <circle cx="7.5" cy="16.5" r="2.5"></circle>
                 </svg>
                 <span>Khóa API & Models</span>
+              </button>
+
+              <button class="settings-tab-btn" id="tabNavGems" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M6 3h12l4 6-10 13L2 9z"></path>
+                  <path d="M11 3v8l-7-2"></path>
+                  <path d="M13 3v8l7-2"></path>
+                </svg>
+                <span>Quản lý Gem</span>
               </button>
 
               <button class="settings-tab-btn" id="tabNavUpdates" type="button">
@@ -1362,7 +1481,36 @@
                 </div>
               </div>
 
-              <!-- PANEL 3: PHIÊN BẢN & CẬP NHẬT -->
+              <!-- PANEL 3: QUẢN LÝ GEM (SKILLS & CHỈ DẪN CHUYÊN SÂU) -->
+              <div class="settings-tab-panel hidden" id="panelSettingsGems">
+                <div class="settings-card-box">
+                  <div class="gem-settings-header">
+                    <div class="gem-settings-header-left">
+                      <h3 class="settings-card-title">
+                        <span style="font-size: 20px; vertical-align: -2px; margin-right: 6px;">💎</span>
+                        <span>Quản lý Gem (Skills & Chỉ dẫn chuyên sâu)</span>
+                      </h3>
+                      <p class="settings-card-subtitle">
+                        Tạo và tùy biến các Gem chuyên biệt. Trong khung chat, chỉ cần gõ <code>/(tên Gem)</code> để tự động kích hoạt bộ chỉ dẫn đã học sẵn của Gem đó.
+                      </p>
+                    </div>
+                    <button class="btn-primary-action" id="btnOpenCreateGemModal" type="button">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 15px; height: 15px;">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                      </svg>
+                      <span>Tạo Gem mới</span>
+                    </button>
+                  </div>
+
+                  <!-- Gem Cards Grid -->
+                  <div class="gem-cards-grid" id="gemSettingsCardsGrid">
+                    <!-- Rendered dynamically -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- PANEL 4: PHIÊN BẢN & CẬP NHẬT (LUÔN Ở CUỐI CÙNG THEO LUẬT 10) -->
               <div class="settings-tab-panel hidden" id="panelSettingsUpdates">
                 <div class="settings-card-box">
                   <h3 class="settings-card-title">
@@ -1476,6 +1624,75 @@
             </svg>
             <span id="btnAcceptUpdateText">Cập nhật siêu tốc (2s)</span>
           </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL TẠO & CHỈNH SỬA GEM -->
+    <div class="modal-overlay hidden" id="modalGemEdit">
+      <div class="modal-card gem-modal-window">
+        <div class="gem-modal-header">
+          <div class="gem-modal-title-group">
+            <span class="gem-modal-icon-badge" id="gemModalIconBadge">💎</span>
+            <div>
+              <h3 class="gem-modal-title" id="gemModalTitle">Tạo Gem Mới</h3>
+              <p class="gem-modal-subtitle">Tùy biến kỹ năng và bộ chỉ dẫn sâu cho AI trợ lý</p>
+            </div>
+          </div>
+          <button class="btn-modal-close" id="btnCloseGemModal" type="button">&times;</button>
+        </div>
+
+        <div class="gem-modal-body">
+          <input type="hidden" id="inputGemId" value="">
+          
+          <div class="gem-form-row">
+            <div class="gem-form-group flex-2">
+              <label class="gem-form-label" for="inputGemName">Tên Gem <span class="required">*</span></label>
+              <input type="text" id="inputGemName" class="gem-form-input" placeholder="Ví dụ: Chuyên gia Phân tích Địa chính trị" spellcheck="false">
+            </div>
+            <div class="gem-form-group flex-1">
+              <label class="gem-form-label" for="inputGemSlug">Lệnh gọi tắt <span class="required">*</span></label>
+              <div class="gem-slug-input-wrap">
+                <span class="gem-slug-prefix">/</span>
+                <input type="text" id="inputGemSlug" class="gem-form-input gem-slug-input" placeholder="diachinhtri" spellcheck="false">
+              </div>
+            </div>
+            <div class="gem-form-group flex-auto">
+              <label class="gem-form-label" for="inputGemIcon">Icon</label>
+              <input type="text" id="inputGemIcon" class="gem-form-input gem-icon-input" value="💎" maxlength="4">
+            </div>
+          </div>
+
+          <div class="gem-quick-icons">
+            <span class="gem-quick-label">Icon nhanh:</span>
+            <button type="button" class="btn-quick-icon">💎</button>
+            <button type="button" class="btn-quick-icon">🧠</button>
+            <button type="button" class="btn-quick-icon">⚡</button>
+            <button type="button" class="btn-quick-icon">🎭</button>
+            <button type="button" class="btn-quick-icon">🌍</button>
+            <button type="button" class="btn-quick-icon">🎯</button>
+            <button type="button" class="btn-quick-icon">🚀</button>
+            <button type="button" class="btn-quick-icon">✍️</button>
+            <button type="button" class="btn-quick-icon">💰</button>
+          </div>
+
+          <div class="gem-form-group" style="margin-top: 14px;">
+            <div class="gem-form-label-row">
+              <label class="gem-form-label" for="inputGemInstructions">Bộ chỉ dẫn hệ thống (System Instructions) <span class="required">*</span></label>
+              <span class="gem-form-hint-badge">Áp dụng trực tiếp làm System Prompt</span>
+            </div>
+            <textarea id="inputGemInstructions" class="gem-form-textarea" rows="8" placeholder="Nhập chi tiết vai trò, kiến thức chuyên sâu, phong cách xưng hô, quy tắc cấm kỵ và cấu trúc phản hồi mong muốn..." spellcheck="false"></textarea>
+          </div>
+        </div>
+
+        <div class="gem-modal-footer">
+          <div class="gem-modal-footer-left">
+            <span class="gem-form-status-msg" id="gemModalStatusMsg"></span>
+          </div>
+          <div class="gem-modal-footer-right">
+            <button class="btn-modal-cancel" id="btnCancelGemModal" type="button">Hủy</button>
+            <button class="btn-modal-apply" id="btnSaveGemModal" type="button">Lưu Gem</button>
+          </div>
         </div>
       </div>
     </div>

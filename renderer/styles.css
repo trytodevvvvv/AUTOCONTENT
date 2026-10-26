@@ -3597,6 +3597,7 @@ input, textarea, select, button {
   font-size: 12px;
   color: #64748B;
   line-height: 1.4;
+  transition: color 0.25s ease, opacity 0.25s ease;
 }
 
 .version-status-text.has-update {
@@ -3612,8 +3613,11 @@ input, textarea, select, button {
 .btn-check-update {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
+  justify-content: center;
+  gap: 8px;
+  min-width: 156px;
+  height: 36px;
+  padding: 0 16px;
   background: #FFFFFF;
   border: 1.5px solid #CBD5E1;
   border-radius: 8px;
@@ -3622,30 +3626,48 @@ input, textarea, select, button {
   color: #334155;
   cursor: pointer;
   white-space: nowrap;
-  transition: all 0.2s ease;
+  user-select: none;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.btn-check-update:hover {
+.btn-check-update:hover:not(:disabled) {
   background: #F5F3FF;
   border-color: #6366F1;
   color: #4F46E5;
-  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.16);
+  transform: translateY(-1px);
+}
+
+.btn-check-update:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.98);
+  box-shadow: 0 1px 3px rgba(99, 102, 241, 0.12);
+}
+
+.btn-check-update:disabled {
+  opacity: 0.85;
+  cursor: wait;
+  background: #F8FAFC;
+  border-color: #E2E8F0;
+  color: #64748B;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-check-update .icon-refresh {
   width: 15px;
   height: 15px;
-  transition: transform 0.3s ease;
+  flex-shrink: 0;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .icon-refresh.rotating {
-  animation: spinRefresh 0.8s linear infinite;
+  animation: spinRefresh 0.85s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes spinRefresh {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Update Notification Modal Window */
@@ -5302,10 +5324,10 @@ input, textarea, select, button {
   resize: vertical;
 }
 
-/* vidIQ Style Tags Cloud & Card */
+/* vidIQ Style Tags Cloud & Card (Modern Tech Light Theme) */
 .vidiq-tags-card {
   padding: 14px 16px;
-  background: #0B1120;
+  background: #FFFFFF;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -5314,76 +5336,103 @@ input, textarea, select, button {
 .vidiq-tags-cloud {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 8px;
   min-height: 70px;
-  max-height: 220px;
+  max-height: 230px;
   overflow-y: auto;
   padding-right: 4px;
+}
+
+.vidiq-tags-cloud::-webkit-scrollbar {
+  width: 5px;
+}
+
+.vidiq-tags-cloud::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vidiq-tags-cloud::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+  border-radius: 9999px;
+}
+
+.vidiq-tags-cloud::-webkit-scrollbar-thumb:hover {
+  background: #CBD5E1;
 }
 
 .vidiq-tag-pill {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 9px;
-  border-radius: 6px;
-  background: #1E293B;
-  border: 1.5px solid #334155;
-  color: #F8FAFC;
+  gap: 7px;
+  padding: 5px 10px 5px 6px;
+  border-radius: 8px;
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  color: #0F172A;
   font-size: 12.5px;
   font-weight: 600;
-  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
+  cursor: default;
 }
 
 .vidiq-tag-pill:hover {
-  border-color: #64748B;
-  background: #243247;
+  border-color: #6366F1;
+  background: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.15);
+  transform: translateY(-2px);
 }
 
 .vidiq-tag-pill .tag-score {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10.5px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
   font-weight: 800;
-  padding: 1px 5px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
 }
 
 .vidiq-tag-pill .tag-score.high {
-  background: rgba(16, 185, 129, 0.2);
-  color: #34D399;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
 .vidiq-tag-pill .tag-score.medium {
-  background: rgba(245, 158, 11, 0.2);
-  color: #FBBF24;
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+  color: #D97706;
+  border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .vidiq-tag-pill .tag-label {
-  line-height: 1.2;
+  line-height: 1.3;
+  color: #1E293B;
+  letter-spacing: 0.01em;
 }
 
 .vidiq-tag-pill .btn-tag-remove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: #F1F5F9;
   color: #94A3B8;
   font-size: 10px;
+  font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   margin-left: 2px;
 }
 
 .vidiq-tag-pill .btn-tag-remove:hover {
-  background: rgba(239, 68, 68, 0.35);
-  color: #FCA5A5;
+  background: rgba(239, 68, 68, 0.15);
+  color: #DC2626;
+  transform: scale(1.15);
 }
 
 /* Custom Tag Input Bar */
@@ -5391,45 +5440,59 @@ input, textarea, select, button {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-top: 10px;
-  border-top: 1px solid #1E293B;
+  padding-top: 12px;
+  border-top: 1px solid #E2E8F0;
 }
 
 .input-custom-tag {
   flex: 1;
-  background: #1E293B;
-  border: 1px solid #334155;
-  border-radius: 6px;
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 8px;
   padding: 8px 12px;
   font-size: 12.5px;
-  color: #F8FAFC;
+  color: #0F172A;
   outline: none;
   font-family: inherit;
-  transition: border-color 0.18s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .input-custom-tag::placeholder {
-  color: #64748B;
+  color: #94A3B8;
 }
 
 .input-custom-tag:focus {
-  border-color: var(--accent-primary);
+  background: #FFFFFF;
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .btn-add-tag-submit {
-  background: #2563EB;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
   color: #FFFFFF;
   border: none;
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-size: 12px;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s ease;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-add-tag-submit:hover {
-  background: #1D4ED8;
+  background: linear-gradient(135deg, #4338CA 0%, #4F46E5 100%);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-add-tag-submit:active {
+  transform: translateY(0.5px) scale(0.98);
 }
 
 /* Skeleton Loading for Description Output */
@@ -5455,3 +5518,1260 @@ input, textarea, select, button {
   background-size: 200% 100%;
   animation: skeletonShimmer 1.5s infinite;
 }
+
+/* ===================================================================
+   MODULE 4: GEM AI STUDIO (CUSTOM SKILLS & CHATBOT WORKSPACE)
+   =================================================================== */
+
+.gem-studio-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 84px);
+  background: #F8FAFC;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+  position: relative;
+}
+
+/* Gem Top Control Bar */
+.gem-studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 20;
+}
+
+.gem-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.gem-brand-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+  color: #FFFFFF;
+  text-transform: uppercase;
+}
+
+.gem-path-text {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.gem-view-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.gem-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Active Gem Selector Pill */
+.gem-active-dropdown-wrapper {
+  position: relative;
+}
+
+.gem-active-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.gem-active-pill:hover {
+  border-color: #6366F1;
+  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.15);
+  background: #FFFFFF;
+}
+
+.gem-pill-icon {
+  font-size: 14px;
+}
+
+.gem-pill-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1E293B;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gem-pill-chevron {
+  width: 14px;
+  height: 14px;
+  color: #64748B;
+  transition: transform 0.2s ease;
+}
+
+.gem-active-pill.active .gem-pill-chevron {
+  transform: rotate(180deg);
+}
+
+.gem-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  max-height: 360px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(14px);
+  border: 1.5px solid #CBD5E1;
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+  padding: 8px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.gem-dropdown-header {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 10px 4px;
+}
+
+.gem-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gem-dropdown-item:hover {
+  background: #F1F5F9;
+}
+
+.gem-dropdown-item.active {
+  background: #EEF2FF;
+}
+
+.gem-dropdown-item-icon {
+  font-size: 16px;
+  width: 24px;
+  text-align: center;
+}
+
+.gem-dropdown-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gem-dropdown-item-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gem-dropdown-item-cmd {
+  font-size: 11px;
+  color: #6366F1;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 600;
+}
+
+.btn-gem-new-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.btn-gem-new-chat svg {
+  width: 14px;
+  height: 14px;
+  color: #6366F1;
+}
+
+.btn-gem-new-chat:hover {
+  border-color: #6366F1;
+  color: #4F46E5;
+  background: #F5F3FF;
+  transform: translateY(-1px);
+}
+
+/* Gem Chat Scroll Area */
+.gem-chat-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+  display: flex;
+  flex-direction: column;
+}
+
+.gem-chat-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.gem-chat-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gem-chat-scroll::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
+}
+
+/* Blank State (LUẬT 9) */
+.gem-chat-blank {
+  margin: auto;
+  text-align: center;
+  max-width: 580px;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.gem-blank-icon {
+  font-size: 48px;
+  line-height: 1;
+  filter: drop-shadow(0 6px 16px rgba(99, 102, 241, 0.25));
+  animation: floatGem 3s ease-in-out infinite;
+}
+
+@keyframes floatGem {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.gem-blank-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+}
+
+.gem-blank-desc {
+  font-size: 13.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.gem-blank-desc kbd {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6366F1;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.gem-starter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.gem-starter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.gem-starter-chip:hover {
+  border-color: #6366F1;
+  color: #4F46E5;
+  background: #EEF2FF;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+/* Chat Messages List */
+.gem-messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.gem-msg-row {
+  display: flex;
+  width: 100%;
+  animation: fadeInMsg 0.25s ease-out;
+}
+
+@keyframes fadeInMsg {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gem-msg-row.user {
+  justify-content: flex-end;
+}
+
+.gem-msg-row.assistant {
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.gem-msg-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  border: 1px solid #C7D2FE;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.12);
+}
+
+.gem-msg-content-wrap {
+  flex: 1;
+  max-width: 86%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.gem-msg-bubble.user {
+  background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+  color: #FFFFFF;
+  border-radius: 18px 18px 4px 18px;
+  padding: 12px 18px;
+  max-width: 80%;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.22);
+  font-size: 13.5px;
+  line-height: 1.6;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.gem-msg-bubble.assistant {
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 4px 18px 18px 18px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #0F172A;
+  word-break: break-word;
+}
+
+/* Markdown styling inside assistant bubble */
+.gem-msg-bubble.assistant p {
+  margin-bottom: 10px;
+}
+
+.gem-msg-bubble.assistant p:last-child {
+  margin-bottom: 0;
+}
+
+.gem-msg-bubble.assistant ul, 
+.gem-msg-bubble.assistant ol {
+  margin: 8px 0 12px 22px;
+}
+
+.gem-msg-bubble.assistant li {
+  margin-bottom: 5px;
+}
+
+.gem-msg-bubble.assistant strong {
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.gem-msg-bubble.assistant code {
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12px;
+  color: #4338CA;
+}
+
+.gem-msg-bubble.assistant pre {
+  background: #0F172A;
+  color: #F8FAFC;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 10px 0;
+  overflow-x: auto;
+  position: relative;
+}
+
+.gem-msg-bubble.assistant pre code {
+  background: transparent;
+  border: none;
+  color: #F8FAFC;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.gem-msg-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 4px;
+}
+
+.btn-msg-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-msg-action:hover {
+  background: #F1F5F9;
+  color: #334155;
+  border-color: #E2E8F0;
+}
+
+.btn-msg-action svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Typing Indicator Animation */
+.gem-typing-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+}
+
+.gem-typing-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6366F1;
+  animation: typingBounce 1.4s infinite ease-in-out both;
+}
+
+.gem-typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+.gem-typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+.gem-typing-dots span:nth-child(3) { animation-delay: 0s; }
+
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Chat Footer & Input Box */
+.gem-chat-footer {
+  padding: 10px 24px 18px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0) 0%, #F8FAFC 25%);
+  position: relative;
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.gem-input-box {
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 16px;
+  padding: 12px 16px 12px 16px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gem-input-box:focus-within {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14), 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+/* Context Badge Bar */
+.gem-input-context-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #EEF2FF;
+  animation: fadeInContext 0.2s ease-out;
+}
+
+@keyframes fadeInContext {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.gem-context-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4F46E5;
+  background: #EEF2FF;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+}
+
+.gem-context-icon {
+  font-size: 14px;
+}
+
+.btn-clear-gem-instruction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748B;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 5px;
+  transition: all 0.15s ease;
+}
+
+.btn-clear-gem-instruction svg {
+  width: 12px;
+  height: 12px;
+}
+
+.btn-clear-gem-instruction:hover {
+  color: #DC2626;
+  background: #FEF2F2;
+}
+
+/* Chat Textarea (Full Width, Auto-expanding, No Visible Scrollbar) */
+.gem-chat-textarea {
+  width: 100%;
+  min-height: 40px;
+  max-height: 480px;
+  overflow-y: auto;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.6;
+  background: transparent;
+  color: #0F172A;
+  padding: 4px 0;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+/* Hide scrollbar completely (BỎ HOÀN TOÀN THANH SLIDE) */
+.gem-chat-textarea::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.gem-chat-textarea::placeholder {
+  color: #94A3B8;
+}
+
+/* Inside Bottom Bar */
+.gem-input-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #F1F5F9;
+}
+
+.gem-input-hint {
+  font-size: 11px;
+  color: #94A3B8;
+  user-select: none;
+}
+
+.gem-input-hint strong {
+  color: #64748B;
+  font-weight: 600;
+}
+
+.btn-gem-send {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+  color: #FFFFFF;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.28);
+  flex-shrink: 0;
+}
+
+.btn-gem-send svg {
+  width: 16px;
+  height: 16px;
+}
+
+.btn-gem-send:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.38);
+}
+
+.btn-gem-send:active {
+  transform: translateY(0.5px) scale(0.96);
+}
+
+.btn-gem-send.generating {
+  background: #EF4444;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+/* Slash Command Autocomplete Popover */
+.gem-slash-popover {
+  position: absolute;
+  bottom: calc(100% - 6px);
+  left: 28px;
+  right: 28px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(14px);
+  border: 1.5px solid #CBD5E1;
+  border-radius: 14px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.16);
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+}
+
+.gem-slash-popover-header {
+  padding: 8px 14px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #64748B;
+  letter-spacing: 0.05em;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.gem-slash-items {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.gem-slash-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gem-slash-item:hover,
+.gem-slash-item.selected {
+  background: #EEF2FF;
+}
+
+.gem-slash-item-icon {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
+}
+
+.gem-slash-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.gem-slash-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gem-slash-item-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.gem-slash-item-cmd {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #4F46E5;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.gem-slash-item-desc {
+  font-size: 11.5px;
+  color: #64748B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+/* ===================================================================
+   GEM MANAGEMENT IN SETTINGS PANEL
+   =================================================================== */
+
+.gem-settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.gem-settings-header-left {
+  flex: 1;
+  min-width: 280px;
+}
+
+/* Button Tạo Gem Mới */
+.btn-primary-action,
+#btnOpenCreateGemModal {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.28);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-primary-action:hover,
+#btnOpenCreateGemModal:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.38);
+  filter: brightness(1.05);
+}
+
+.btn-primary-action:active,
+#btnOpenCreateGemModal:active {
+  transform: translateY(0.5px) scale(0.98);
+}
+
+/* Bento Persona Cards Grid - 4 Columns Compact */
+.gem-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 1280px) {
+  .gem-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .gem-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.gem-card-item {
+  background: #FFFFFF;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+  position: relative;
+  min-height: 58px;
+}
+
+.gem-card-item:hover {
+  border-color: #818CF8;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.12);
+  transform: translateY(-2px);
+}
+
+.gem-card-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.gem-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.gem-card-icon-wrap {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 9px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(99, 102, 241, 0.08);
+}
+
+.gem-card-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.gem-card-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.gem-card-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.gem-card-cmd-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #4F46E5;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 1.5px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  margin-top: 2px;
+}
+
+.gem-card-desc {
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+}
+
+.gem-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.btn-gem-card-action.icon-only {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-gem-card-action.icon-only svg {
+  width: 13px;
+  height: 13px;
+}
+
+.btn-gem-card-action.icon-only:hover {
+  background: #EEF2FF;
+  border-color: #6366F1;
+  color: #4F46E5;
+  transform: translateY(-1px);
+}
+
+.btn-gem-card-action.icon-only.danger:hover {
+  background: #EF4444;
+  border-color: #EF4444;
+  color: #FFFFFF;
+}
+
+/* Empty State Container */
+.gem-settings-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px;
+  text-align: center;
+  background: #FAFAFB;
+  border: 1.5px dashed #CBD5E1;
+  border-radius: 16px;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.gem-empty-icon {
+  font-size: 42px;
+  line-height: 1;
+  opacity: 0.65;
+  margin-bottom: 4px;
+}
+
+.gem-empty-title {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #1E293B;
+}
+
+.gem-empty-desc {
+  font-size: 13px;
+  color: #64748B;
+  max-width: 440px;
+  line-height: 1.5;
+  margin: 0 0 8px 0;
+}
+
+.gem-empty-desc code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: #4F46E5;
+  background: #EEF2FF;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ===================================================================
+   GEM CREATE/EDIT MODAL
+   =================================================================== */
+
+.gem-modal-window {
+  max-width: 600px;
+  width: 90%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #FFFFFF;
+  box-shadow: 0 24px 54px -12px rgba(15, 23, 42, 0.32), 0 0 0 1px rgba(0, 0, 0, 0.05);
+}
+
+.gem-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  background: linear-gradient(135deg, #1E1B4B 0%, #312E81 100%);
+  color: #FFFFFF;
+}
+
+.gem-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gem-modal-icon-badge {
+  font-size: 24px;
+  width: 44px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal Close Button (Fix Image 2) */
+.gem-modal-header .btn-modal-close,
+.btn-modal-close {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.gem-modal-header .btn-modal-close:hover,
+.btn-modal-close:hover {
+  background: rgba(239, 68, 68, 0.85);
+  border-color: rgba(239, 68, 68, 0.9);
+  color: #FFFFFF;
+  transform: rotate(90deg) scale(1.08);
+}
+
+.gem-modal-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.gem-modal-subtitle {
+  font-size: 12px;
+  color: #C7D2FE;
+  margin-top: 2px;
+}
+
+.gem-modal-body {
+  padding: 20px 22px;
+  max-height: 72vh;
+  overflow-y: auto;
+}
+
+.gem-form-row {
+  display: flex;
+  gap: 12px;
+}
+
+.gem-form-group.flex-2 { flex: 2; }
+.gem-form-group.flex-1 { flex: 1; }
+.gem-form-group.flex-auto { width: 70px; flex-shrink: 0; }
+
+.gem-form-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.gem-form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.gem-form-hint-badge {
+  font-size: 10.5px;
+  color: #4F46E5;
+  background: rgba(99, 102, 241, 0.1);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.gem-form-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0F172A;
+  background: #FFFFFF;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gem-form-input:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.gem-slug-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 8px;
+  background: #FFFFFF;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gem-slug-input-wrap:focus-within {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.gem-slug-prefix {
+  padding-left: 10px;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  color: #6366F1;
+  font-size: 14px;
+}
+
+.gem-slug-input {
+  border: none !important;
+  box-shadow: none !important;
+  padding: 9px 8px !important;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.gem-icon-input {
+  text-align: center;
+  font-size: 16px;
+}
+
+.gem-quick-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.gem-quick-label {
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+.btn-quick-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-quick-icon:hover {
+  background: #EEF2FF;
+  border-color: #6366F1;
+  transform: scale(1.1);
+}
+
+.gem-form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #0F172A;
+  background: #FFFFFF;
+  outline: none;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 140px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gem-form-textarea:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.gem-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+}
+
+.gem-form-status-msg {
+  font-size: 12px;
+  font-weight: 600;
+  color: #EF4444;
+}
+

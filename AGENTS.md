@@ -151,6 +151,17 @@ Tài liệu này là **Hiến pháp dự án** dành cho tất cả các lập t
 3. **Chuẩn hóa ô nhập liệu (Input Cleanliness)**:
    * Các ô nhập liệu (Textarea / Input) không cần để placeholder ví dụ dài dòng làm phân tâm người dùng. Mặc định để trống (`placeholder=""`) hoặc giữ cực kỳ ngắn gọn, không chèn các đoạn văn bản ví dụ dài.
 
+---
+
+## 🔒 LUẬT 10: VỊ TRÍ BẤT DI BẤT DỊCH CỦA TAB PHIÊN BẢN & CẬP NHẬT (STRICT END-OF-LIST POSITION)
+
+1. **Chốt chặn cuối cùng trong Trung tâm Cài đặt**:
+   * Trong Trung tâm Cài đặt (Settings), tab **"Phiên bản & Cập nhật"** bắt buộc **LUÔN LUÔN NẰM Ở VỊ TRÍ CUỐI CÙNG** trong thanh điều hướng ngang (`settings-nav-tabs`).
+   * Bất kỳ tính năng hoặc tab cài đặt mới nào được bổ sung trong tương lai (ví dụ: *Quản lý Gem*, *Lịch sử*, *Mở rộng*...) đều bắt buộc phải xếp phía trước tab "Phiên bản & Cập nhật".
+2. **Bảo toàn trải nghiệm nhất quán**:
+   * Người dùng luôn có thói quen tìm kiếm mục kiểm tra cập nhật ở điểm cuối cùng của danh sách điều hướng. Tuyệt đối không xáo trộn hoặc đẩy tab này lên trước các tab tính năng nghiệp vụ khác.
+
+
 
 
 

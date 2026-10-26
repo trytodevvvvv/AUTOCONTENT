@@ -1,6 +1,6 @@
 {
   "name": "autocontent-ai",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Auto Content Scriptwriter Desktop App with Multi-Provider AI",
   "main": "main.js",
   "scripts": {

@@ -54,6 +54,15 @@ const state = {
     tags: [],
     descriptionText: '',
     abortController: null
+  },
+  gemState: {
+    gems: [],
+    activeGemId: null,
+    messages: [],
+    isGenerating: false,
+    abortController: null,
+    slashSelectedIndex: 0,
+    isSlashOpen: false
   }
 };
 
@@ -193,25 +202,63 @@ const DOM = {
   btnNavScript: document.getElementById('btnNavScript'),
   btnNavDescription: document.getElementById('btnNavDescription'),
   btnNavTitle: document.getElementById('btnNavTitle'),
+  btnNavGem: document.getElementById('btnNavGem'),
   btnNavSettings: document.getElementById('btnNavSettings'),
   sidebarStatusDot: document.getElementById('sidebarStatusDot'),
   sidebarUpdateDot: document.getElementById('sidebarUpdateDot'),
   viewScriptwriter: document.getElementById('viewScriptwriter'),
   viewDescriptionGenerator: document.getElementById('viewDescriptionGenerator'),
   viewTitleGenerator: document.getElementById('viewTitleGenerator'),
+  viewGemStudio: document.getElementById('viewGemStudio'),
   viewSettings: document.getElementById('viewSettings'),
   btnBackToScript: document.getElementById('btnBackToScript'),
   btnBackToScriptText: document.getElementById('btnBackToScriptText'),
   headerSubtitleText: document.getElementById('headerSubtitleText'),
   tabNavGeneral: document.getElementById('tabNavGeneral'),
   tabNavApiKeys: document.getElementById('tabNavApiKeys'),
+  tabNavGems: document.getElementById('tabNavGems'),
   tabNavUpdates: document.getElementById('tabNavUpdates'),
   tabUpdateDot: document.getElementById('tabUpdateDot'),
   panelSettingsGeneral: document.getElementById('panelSettingsGeneral'),
   panelSettingsApiKeys: document.getElementById('panelSettingsApiKeys'),
+  panelSettingsGems: document.getElementById('panelSettingsGems'),
   panelSettingsUpdates: document.getElementById('panelSettingsUpdates'),
   selTitleDefaultLang: document.getElementById('selTitleDefaultLang'),
   chkAutoCheckUpdateStartup: document.getElementById('chkAutoCheckUpdateStartup'),
+
+  // Gem Studio & Management Elements
+  btnGemActiveSelector: document.getElementById('btnGemActiveSelector'),
+  gemActivePillIcon: document.getElementById('gemActivePillIcon'),
+  gemActivePillName: document.getElementById('gemActivePillName'),
+  gemDropdownMenu: document.getElementById('gemDropdownMenu'),
+  gemDropdownList: document.getElementById('gemDropdownList'),
+  btnGemNewChat: document.getElementById('btnGemNewChat'),
+  gemChatScroll: document.getElementById('gemChatScroll'),
+  gemChatBlank: document.getElementById('gemChatBlank'),
+  gemStarterChips: document.getElementById('gemStarterChips'),
+  gemMessagesList: document.getElementById('gemMessagesList'),
+  gemSlashPopover: document.getElementById('gemSlashPopover'),
+  gemSlashItems: document.getElementById('gemSlashItems'),
+  inputGemChat: document.getElementById('inputGemChat'),
+  btnGemSend: document.getElementById('btnGemSend'),
+  gemInputContextBar: document.getElementById('gemInputContextBar'),
+  gemContextIcon: document.getElementById('gemContextIcon'),
+  gemContextName: document.getElementById('gemContextName'),
+  btnClearGemInstruction: document.getElementById('btnClearGemInstruction'),
+  btnOpenCreateGemModal: document.getElementById('btnOpenCreateGemModal'),
+  gemSettingsCardsGrid: document.getElementById('gemSettingsCardsGrid'),
+  modalGemEdit: document.getElementById('modalGemEdit'),
+  btnCloseGemModal: document.getElementById('btnCloseGemModal'),
+  btnCancelGemModal: document.getElementById('btnCancelGemModal'),
+  btnSaveGemModal: document.getElementById('btnSaveGemModal'),
+  gemModalTitle: document.getElementById('gemModalTitle'),
+  gemModalIconBadge: document.getElementById('gemModalIconBadge'),
+  inputGemId: document.getElementById('inputGemId'),
+  inputGemName: document.getElementById('inputGemName'),
+  inputGemSlug: document.getElementById('inputGemSlug'),
+  inputGemIcon: document.getElementById('inputGemIcon'),
+  inputGemInstructions: document.getElementById('inputGemInstructions'),
+  gemModalStatusMsg: document.getElementById('gemModalStatusMsg'),
 
   // Module: Description & vidIQ Tags Generator Elements
   btnSampleDesc: document.getElementById('btnSampleDesc'),
@@ -419,6 +466,7 @@ const DOM = {
 async function initApp() {
   bindEvents();
   await loadSettings();
+  loadGemsFromStorage();
   updateHeaderActiveModel();
   checkReadiness();
   checkTitleReadiness();
@@ -509,15 +557,20 @@ function switchMainView(viewName, settingsTab = 'general') {
     return;
   }
 
+  if (state.gemState?.isGenerating && viewName !== 'gem') {
+    showToast('AI đang phản hồi tin nhắn trong Gem, vui lòng đợi hoàn tất trước khi chuyển trang!', 'warning');
+    return;
+  }
+
   // Hide popover if open
   if (DOM.quickApiMenu) DOM.quickApiMenu.classList.add('hidden');
   if (DOM.pillChevron) DOM.pillChevron.classList.remove('rotate');
 
   // Reset active tabs & views
-  [DOM.btnNavScript, DOM.btnNavDescription, DOM.btnNavTitle, DOM.btnNavSettings].forEach(btn => {
+  [DOM.btnNavScript, DOM.btnNavDescription, DOM.btnNavTitle, DOM.btnNavGem, DOM.btnNavSettings].forEach(btn => {
     if (btn) btn.classList.remove('active');
   });
-  [DOM.viewScriptwriter, DOM.viewDescriptionGenerator, DOM.viewTitleGenerator, DOM.viewSettings].forEach(view => {
+  [DOM.viewScriptwriter, DOM.viewDescriptionGenerator, DOM.viewTitleGenerator, DOM.viewGemStudio, DOM.viewSettings].forEach(view => {
     if (view) view.classList.add('hidden');
   });
 
@@ -539,6 +592,13 @@ function switchMainView(viewName, settingsTab = 'general') {
     if (DOM.btnNavTitle) DOM.btnNavTitle.classList.add('active');
     if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'AI Viral Title Generator & YouTube CTR Studio';
     checkTitleReadiness();
+  } else if (viewName === 'gem') {
+    state.activeWorkspaceView = 'gem';
+    if (DOM.viewGemStudio) DOM.viewGemStudio.classList.remove('hidden');
+    if (DOM.btnNavGem) DOM.btnNavGem.classList.add('active');
+    if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'Gem AI Studio - Custom Skills & Trợ lý thông minh';
+    renderGemChatUI();
+    if (DOM.inputGemChat) DOM.inputGemChat.focus();
   } else if (viewName === 'settings') {
     if (DOM.viewSettings) DOM.viewSettings.classList.remove('hidden');
     if (DOM.btnNavSettings) DOM.btnNavSettings.classList.add('active');
@@ -550,10 +610,12 @@ function switchMainView(viewName, settingsTab = 'general') {
       backText = 'Quay lại Mô tả';
     } else if (state.activeWorkspaceView === 'title') {
       backText = 'Quay lại Tiêu đề';
+    } else if (state.activeWorkspaceView === 'gem') {
+      backText = 'Quay lại Gem';
     }
     if (DOM.btnBackToScriptText) DOM.btnBackToScriptText.textContent = backText;
     if (DOM.btnBackToScript) {
-      const workspaceLabel = state.activeWorkspaceView === 'description' ? 'Mô tả' : (state.activeWorkspaceView === 'title' ? 'Tiêu đề' : 'Kịch bản');
+      const workspaceLabel = state.activeWorkspaceView === 'description' ? 'Mô tả' : (state.activeWorkspaceView === 'title' ? 'Tiêu đề' : (state.activeWorkspaceView === 'gem' ? 'Gem' : 'Kịch bản'));
       DOM.btnBackToScript.title = `Quay lại bàn làm việc ${workspaceLabel}`;
     }
 
@@ -565,6 +627,7 @@ function switchSettingsTab(tabName) {
   const tabs = [
     { name: 'general', btn: DOM.tabNavGeneral, panel: DOM.panelSettingsGeneral },
     { name: 'apikeys', btn: DOM.tabNavApiKeys, panel: DOM.panelSettingsApiKeys },
+    { name: 'gems', btn: DOM.tabNavGems, panel: DOM.panelSettingsGems },
     { name: 'updates', btn: DOM.tabNavUpdates, panel: DOM.panelSettingsUpdates }
   ];
 
@@ -577,6 +640,10 @@ function switchSettingsTab(tabName) {
       if (t.panel) t.panel.classList.add('hidden');
     }
   });
+
+  if (tabName === 'gems') {
+    renderSettingsGems();
+  }
 
   if (tabName === 'apikeys') {
     if (!state.currentEditingProviderId) {
@@ -623,12 +690,21 @@ function bindEvents() {
   if (DOM.btnNavTitle) {
     DOM.btnNavTitle.addEventListener('click', () => switchMainView('title'));
   }
+  if (DOM.btnNavGem) {
+    DOM.btnNavGem.addEventListener('click', () => switchMainView('gem'));
+  }
   if (DOM.btnNavSettings) {
     DOM.btnNavSettings.addEventListener('click', () => switchMainView('settings', 'general'));
+  }
+  if (DOM.tabNavGems) {
+    DOM.tabNavGems.addEventListener('click', () => switchSettingsTab('gems'));
   }
   if (DOM.btnBackToScript) {
     DOM.btnBackToScript.addEventListener('click', () => switchMainView(state.activeWorkspaceView || 'script'));
   }
+
+  // Gem Module Events
+  bindGemEvents();
 
   // Module: Description & vidIQ Tags Generator Event Bindings
   if (DOM.inputDescTitle) {
@@ -2711,6 +2787,7 @@ async function triggerManualUpdateCheck() {
     return;
   }
 
+  const startTime = Date.now();
   DOM.btnCheckUpdateManual.disabled = true;
   if (DOM.iconRefreshUpdate) DOM.iconRefreshUpdate.classList.add('rotating');
   if (DOM.btnCheckUpdateText) DOM.btnCheckUpdateText.textContent = 'Đang kiểm tra...';
@@ -2721,6 +2798,12 @@ async function triggerManualUpdateCheck() {
 
   try {
     const res = await window.api.checkForUpdates(true);
+
+    // Đảm bảo thời gian hiển thị tối thiểu 650ms để hiệu ứng xoay trọn vẹn, không giật khựng
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 650) {
+      await new Promise(resolve => setTimeout(resolve, 650 - elapsed));
+    }
 
     if (res && res.hasUpdate) {
       handleUpdateDetected(res, true);
@@ -2733,6 +2816,10 @@ async function triggerManualUpdateCheck() {
       showToast(res?.message || 'Bạn đang sử dụng phiên bản mới nhất!', 'info');
     }
   } catch (err) {
+    const elapsed = Date.now() - startTime;
+    if (elapsed < 650) {
+      await new Promise(resolve => setTimeout(resolve, 650 - elapsed));
+    }
     if (DOM.appVersionStatusText) {
       DOM.appVersionStatusText.textContent = `Lỗi kiểm tra cập nhật: ${err.message}`;
       DOM.appVersionStatusText.className = 'version-status-text';
@@ -4120,12 +4207,19 @@ async function startDescriptionGeneration() {
   const now = new Date();
   const dateStr = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
 
+  const descPart3Prompt = isSrtMode
+    ? `- Phần 3 (Phân cảnh Chapters & Mốc thời gian thực từ Phụ đề SRT bằng ${targetLangObj.name}):
+  * BẮT BUỘC phân tích các mốc thời gian THỰC TẾ trong phụ đề SRT do người dùng cung cấp và tạo ra 4 đến 8 chapters logic bắt đầu BẮT BUỘC bằng mốc "00:00 - [Tên phân cảnh mở đầu]". Tiêu đề các chapters BẮT BUỘC phải viết bằng ${targetLangObj.name}. Tuyệt đối lấy đúng mốc giờ từ phụ đề.`
+    : `- Phần 3 (Điểm nhấn nội dung & Luận điểm then chốt của video bằng ${targetLangObj.name}):
+  * NGUYÊN TẮC BẢO HIỂM TUYỆT ĐỐI (ZERO-TIMESTAMP RULE): Đây là kịch bản văn bản thuần túy, KHÔNG CÓ dữ liệu thời gian thật. NGHIÊM CẤM TUYỆT ĐỐI không được tự ý bịa đặt hoặc suy diễn các mốc thời gian (CẤM TOÀN BỘ '00:00', 'mm:ss' hoặc bất kỳ con số giờ/phút nào).
+  * Hãy trình bày 3 đến 6 luận điểm nổi bật hoặc điểm nhấn hấp dẫn nhất của video dưới dạng các gạch đầu dòng bullet points (•) thuần chữ bằng ${targetLangObj.name}, kích thích tối đa trí tò mò của khán giả.`;
+
   const systemPrompt = `Bạn là Chuyên gia hàng đầu thế giới về Tối ưu hóa SEO YouTube và Chuyên gia thuật toán vidIQ (Senior YouTube SEO Specialist & vidIQ Algorithm Master).
 NGỮ CẢNH THỜI GIAN THỰC HIỆN TẠI: ${dateStr}.
 NGÔN NGỮ MỤC TIÊU BẮT BUỘC (100% STRICT TARGET LANGUAGE): ${targetLangObj.name} (${targetLangObj.promptDesc}).
 
 HIẾN PHÁP NGÔN NGỮ TỐI THƯỢNG (ZERO-LEAKAGE LANGUAGE POLICY):
-1. BẮT BUỘC 100% mọi câu chữ trong bản MÔ TẢ (SEO Description) - từ câu hook mở đầu, tóm tắt, tên các chapters/timestamps, lời kêu gọi CTA, đến các hashtags - ĐỀU PHẢI VIẾT HOÀN TOÀN BẰNG ${targetLangObj.name}.
+1. BẮT BUỘC 100% mọi câu chữ trong bản MÔ TẢ (SEO Description) - từ câu hook mở đầu, tóm tắt, ${isSrtMode ? 'tên các chapters/timestamps' : 'các điểm nhấn luận điểm'}, lời kêu gọi CTA, đến các hashtags - ĐỀU PHẢI VIẾT HOÀN TOÀN BẰNG ${targetLangObj.name}.
 2. TUYỆT ĐỐI NGHIÊM CẤM pha trộn tiếng Việt hoặc bất kỳ ngôn ngữ nào khác nếu ngôn ngữ mục tiêu không phải là tiếng Việt.
 3. BẮT BUỘC 100% toàn bộ danh sách TAGS YOUTUBE (vidIQ style) phải là các từ khóa bản địa (Native Search Queries) bằng ${targetLangObj.name} mà người dùng tại quốc gia đó thực sự tìm kiếm trên YouTube.
 
@@ -4136,9 +4230,7 @@ Nhiệm vụ của bạn: Từ Tiêu đề video và Kịch bản nội dung đ�
 QUY TẮC BẮT BUỘC CHO MÔ TẢ (SEO DESCRIPTION) BẰNG ${targetLangObj.name}:
 - Phần 1 (2 dòng đầu tiên, < 150 ký tự): Câu hook/mở đầu cực kỳ cuốn hút bằng ${targetLangObj.name}, đánh trúng khoảng trống tò mò (Curiosity Gap) và chứa tự nhiên từ khóa chính.
 - Phần 2 (Tóm tắt & Nội dung cốt lõi): 2-3 đoạn văn cô đọng, sắc bén bằng ${targetLangObj.name}, chia sẻ giá trị người xem sẽ nhận được.
-- Phần 3 (Mốc thời gian / Timestamps / Chapters bằng ${targetLangObj.name}):
-  * NẾU CHẾ ĐỘ SRT (${isSrtMode ? 'ĐANG BẬT' : 'KHÔNG BẬT'}): Bạn BẮT BUỘC phải phân tích các mốc thời gian thực trong phụ đề SRT do người dùng cung cấp và tạo ra 4 đến 8 chapters logic bắt đầu BẮT BUỘC bằng mốc "00:00 - Introduction/Giới thiệu...". Tiêu đề các chapters BẮT BUỘC phải viết bằng ${targetLangObj.name}.
-  * Nếu không có SRT hoặc chế độ văn bản thường: Tạo các mốc nội dung nổi bật bằng ${targetLangObj.name}.
+${descPart3Prompt}
 - Phần 4 (Kêu gọi hành động & Liên kết): Kêu gọi người xem Like, Đăng ký kênh và bấm chuông thông báo (🔔) bằng ${targetLangObj.name}.
 - Phần 5 (DƯỚI CÙNG BẮT BUỘC): Đặt từ 3 đến 5 Hashtags SEO thịnh hành nhất bằng ${targetLangObj.name} bắt đầu bằng dấu #.
 
@@ -4156,7 +4248,7 @@ QUY TẮC BẮT BUỘC CHO TAGS YOUTUBE (VIDIQ STYLE) BẰNG ${targetLangObj.nam
 ĐỊNH DẠNG ĐẦU RA BẮT BUỘC (JSON SCHEMA):
 BẮT BUỘC chỉ trả về duy nhất 1 đối tượng JSON thuần túy (không chào hỏi hay viết thêm chữ nào ngoài JSON):
 {
-  "description": "Nội dung toàn bộ mô tả video bằng ${targetLangObj.name} gồm hook, tóm tắt, chapters (nếu có srt), CTA và hashtags...",
+  "description": "${isSrtMode ? 'Nội dung toàn bộ mô tả video gồm hook, tóm tắt, chapters theo mốc thời gian thực từ SRT, CTA và hashtags...' : 'Nội dung toàn bộ mô tả video gồm hook, tóm tắt, các điểm nhấn luận điểm (TUYỆT ĐỐI KHÔNG CÓ TIMESTAMPS HOẶC 00:00), CTA và hashtags...'}",
   "tags": [
     { "text": "tag 1 in ${targetLangObj.name}", "score": 92 },
     { "text": "tag 2 in ${targetLangObj.name}", "score": 88 },
@@ -4167,13 +4259,13 @@ BẮT BUỘC chỉ trả về duy nhất 1 đối tượng JSON thuần túy (kh
   const userPrompt = `Thời điểm: ${dateStr}.
 NGÔN NGỮ MỤC TIÊU BẮT BUỘC: ${targetLangObj.name} (Toàn bộ mô tả và tags BẮT BUỘC 100% bằng ${targetLangObj.name}).
 TIÊU ĐỀ VIDEO: "${title}"
-CHẾ ĐỘ KỊCH BẢN: ${isSrtMode ? 'Phụ đề SRT (Hãy trích xuất Timestamps chính xác bắt đầu từ 00:00)' : 'Kịch bản văn bản thuần'}
+CHẾ ĐỘ KỊCH BẢN: ${isSrtMode ? 'Phụ đề SRT (Trích xuất các mốc Chapters chính xác theo thời gian thực trong SRT, bắt đầu từ 00:00)' : 'Kịch bản văn bản thuần (TUYỆT ĐỐI CẤM TẠO MỐC THỜI GIAN/TIMESTAMPS/00:00. Dùng gạch đầu dòng • tóm tắt luận điểm nổi bật)'}
 NỘI DUNG KỊCH BẢN CUNG CẤP:
 """
 ${content || '(Người dùng chỉ cung cấp tiêu đề, hãy phân tích tiêu đề và suy luận toàn diện để tạo mô tả và tags xuất sắc)'}
 """
 
-Hãy tạo Mô tả SEO tối ưu và danh sách Tags phong cách vidIQ theo đúng JSON Schema đã quy định, TOÀN BỘ 100% BẰNG ${targetLangObj.name}. Lưu ý tổng độ dài chuỗi tags nối dấu phẩy phải nhỏ hơn hoặc bằng 500 ký tự.`;
+Hãy tạo Mô tả SEO tối ưu và danh sách Tags phong cách vidIQ theo đúng JSON Schema đã quy định, TOÀN BỘ 100% BẰNG ${targetLangObj.name}.${!isSrtMode ? ' NHẮC LẠI: TUYỆT ĐỐI KHÔNG CHÈN BẤT KỲ MỐC THỜI GIAN 00:00 HOẶC mm:ss NÀO.' : ''} Lưu ý tổng độ dài chuỗi tags nối dấu phẩy phải nhỏ hơn hoặc bằng 500 ký tự.`;
 
   setDescGeneratingUIState(true);
   state.descriptionState.abortController = new AbortController();
@@ -4270,6 +4362,11 @@ Hãy tạo Mô tả SEO tối ưu và danh sách Tags phong cách vidIQ theo đ�
       throw new Error('Không thể phân tích định dạng Mô tả & Tags từ phản hồi AI!');
     }
 
+    // TẦNG 2 BẢO HIỂM: Nếu là Kịch bản văn bản, tự động bóc tách sạch sẽ mọi mốc thời gian mm:ss nếu model AI cố tình sinh ra
+    if (!isSrtMode && parsedResult.description) {
+      parsedResult.description = sanitizePlainTextDescription(parsedResult.description);
+    }
+
     state.descriptionState.descriptionText = parsedResult.description;
     state.descriptionState.tags = parsedResult.tags || [];
 
@@ -4301,6 +4398,26 @@ Hãy tạo Mô tả SEO tối ưu và danh sách Tags phong cách vidIQ theo đ�
     setDescGeneratingUIState(false);
     state.descriptionState.abortController = null;
   }
+}
+
+function sanitizePlainTextDescription(descText) {
+  if (!descText || typeof descText !== 'string') return '';
+  const lines = descText.split('\n');
+  const cleanedLines = lines.map(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return line;
+
+    // Pattern matching leading timestamps like: 00:00, 01:15, [00:00], (01:15), • 00:00 -, 1:25:30, etc.
+    const timestampRegex = /^(?:•\s*|-|\*|\d+[\.\)])?\s*(?:\[|\()?(\d{1,2}:\d{2}(?::\d{2})?)(?:\]|\))?\s*[-–—:•]*\s*(.*)$/;
+    const match = trimmed.match(timestampRegex);
+    if (match) {
+      const rest = match[2].trim();
+      return rest ? `• ${rest}` : '';
+    }
+    return line;
+  });
+
+  return cleanedLines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function parseDescriptionAndTagsFromResponse(rawText) {
@@ -4595,6 +4712,1148 @@ ${tagsString}`;
   }
 }
 
+// ===================================================================
+// GEM AI STUDIO: KỸ NĂNG, CHATBOT & QUẢN LÝ CHỈ DẪN CHUYÊN SÂU
+// ===================================================================
+
+const DEFAULT_GEMS = [];
+
+// Load Gems from localStorage
+function loadGemsFromStorage() {
+  try {
+    const raw = localStorage.getItem('autocontent_user_gems');
+    let gems = [];
+    if (raw) {
+      gems = JSON.parse(raw);
+    }
+    
+    // Purge obsolete sample gems if any were previously stored
+    const OBSOLETE_SAMPLE_IDS = ['gem_geopolitics', 'gem_storyteller', 'gem_hookmaster', 'gem_localization'];
+    if (Array.isArray(gems)) {
+      gems = gems.filter(g => !OBSOLETE_SAMPLE_IDS.includes(g.id));
+    } else {
+      gems = [];
+    }
+
+    state.gemState.gems = gems;
+    localStorage.setItem('autocontent_user_gems', JSON.stringify(gems));
+
+    if (!gems.some(g => g.id === state.gemState.activeGemId)) {
+      state.gemState.activeGemId = gems.length > 0 ? gems[0].id : null;
+    }
+
+    renderActiveGemSelector();
+    renderGemStarterChips();
+  } catch (err) {
+    console.error('Lỗi khi tải danh sách Gem:', err);
+    state.gemState.gems = [];
+    state.gemState.activeGemId = null;
+  }
+}
+
+// Save Gems to localStorage
+function saveGemsToStorage() {
+  try {
+    localStorage.setItem('autocontent_user_gems', JSON.stringify(state.gemState.gems));
+  } catch (err) {
+    console.error('Lỗi khi lưu danh sách Gem:', err);
+    showToast('Không thể lưu Gem vào bộ nhớ máy!', 'danger');
+  }
+}
+
+// Render active Gem selector in Gem Studio header
+function renderActiveGemSelector() {
+  const currentGem = state.gemState.gems.find(g => g.id === state.gemState.activeGemId) || (state.gemState.gems.length > 0 ? state.gemState.gems[0] : null);
+  if (!currentGem) {
+    if (DOM.gemActivePillIcon) DOM.gemActivePillIcon.textContent = '💎';
+    if (DOM.gemActivePillName) DOM.gemActivePillName.textContent = 'Chưa chọn Gem';
+    if (DOM.gemDropdownList) DOM.gemDropdownList.innerHTML = '<div style="padding: 12px; font-size: 12px; color: #94A3B8; text-align: center;">Chưa có Gem nào</div>';
+    return;
+  }
+
+  if (DOM.gemActivePillIcon) DOM.gemActivePillIcon.textContent = currentGem.icon || '💎';
+  if (DOM.gemActivePillName) DOM.gemActivePillName.textContent = currentGem.name || 'Chọn Gem';
+
+  if (DOM.gemDropdownList) {
+    DOM.gemDropdownList.innerHTML = state.gemState.gems.map(g => {
+      const isActive = g.id === currentGem.id;
+      return `
+        <div class="gem-dropdown-item ${isActive ? 'active' : ''}" data-gem-id="${g.id}">
+          <span class="gem-dropdown-item-icon">${g.icon}</span>
+          <div class="gem-dropdown-item-info">
+            <div class="gem-dropdown-item-title-row">
+              <span class="gem-dropdown-item-name">${escapeHtml(g.name)}</span>
+              <span class="gem-dropdown-item-cmd">/${escapeHtml(g.slug)}</span>
+            </div>
+            <span class="gem-dropdown-item-desc">${escapeHtml(g.desc || '')}</span>
+          </div>
+          ${isActive ? '<span class="gem-dropdown-item-check">✓</span>' : ''}
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+// Set active Gem by ID
+function setActiveGem(gemId, showNotification = true) {
+  const gem = state.gemState.gems.find(g => g.id === gemId);
+  if (!gem) return;
+
+  state.gemState.activeGemId = gem.id;
+  renderActiveGemSelector();
+  renderGemStarterChips();
+
+  if (DOM.gemDropdownMenu) {
+    DOM.gemDropdownMenu.classList.add('hidden');
+  }
+
+  if (showNotification) {
+    showToast(`Đã chuyển sang: ${gem.icon} ${gem.name}`, 'info', 1600);
+  }
+}
+
+// Render starter chips representing all available Gems
+function renderGemStarterChips() {
+  if (!DOM.gemStarterChips) return;
+
+  const gems = state.gemState.gems || [];
+  if (gems.length === 0) {
+    DOM.gemStarterChips.innerHTML = '';
+    return;
+  }
+
+  DOM.gemStarterChips.innerHTML = gems.map(g => `
+    <button type="button" class="gem-starter-chip" data-gem-id="${g.id}" title="Bấm để gọi toàn bộ chỉ dẫn của ${escapeHtml(g.name)}">
+      <span>${g.icon} /${escapeHtml(g.slug)} • ${escapeHtml(g.name)}</span>
+    </button>
+  `).join('');
+}
+
+// Insert entire Gem system instructions into input box
+function insertGemInstructionsIntoInput(gem, customQuestion = '') {
+  if (!gem || !DOM.inputGemChat) return;
+
+  state.gemState.activeGemId = gem.id;
+
+  const template = `[CHỈ DẪN HỆ THỐNG - ${gem.name.toUpperCase()}]:
+${gem.instructions.trim()}
+
+---
+[YÊU CẦU CỦA BẠN]: ${customQuestion}`;
+
+  DOM.inputGemChat.value = template;
+  DOM.inputGemChat.focus();
+
+  // Move cursor to end
+  DOM.inputGemChat.selectionStart = DOM.inputGemChat.selectionEnd = DOM.inputGemChat.value.length;
+
+  adjustGemTextareaHeight();
+
+  if (DOM.gemSlashPopover) {
+    DOM.gemSlashPopover.classList.add('hidden');
+  }
+  state.gemState.isSlashOpen = false;
+
+  // Show Context Bar above input box
+  if (DOM.gemInputContextBar) {
+    if (DOM.gemContextIcon) DOM.gemContextIcon.textContent = gem.icon || '💎';
+    if (DOM.gemContextName) DOM.gemContextName.textContent = `Chỉ dẫn: ${gem.name}`;
+    DOM.gemInputContextBar.classList.remove('hidden');
+  }
+
+  // Temporarily hide starter chips so input box expands cleanly upward to the welcome text
+  if (DOM.gemStarterChips) {
+    DOM.gemStarterChips.classList.add('hidden');
+  }
+
+  showToast(`Đã gọi toàn bộ chỉ dẫn của ${gem.icon} ${gem.name}`, 'info', 1800);
+}
+
+// Render Gem Chat UI
+function renderGemChatUI() {
+  const hasMessages = state.gemState.messages && state.gemState.messages.length > 0;
+
+  if (!hasMessages) {
+    if (DOM.gemChatBlank) DOM.gemChatBlank.classList.remove('hidden');
+    if (DOM.gemMessagesList) {
+      DOM.gemMessagesList.classList.add('hidden');
+      DOM.gemMessagesList.innerHTML = '';
+    }
+    renderGemStarterChips();
+  } else {
+    if (DOM.gemChatBlank) DOM.gemChatBlank.classList.add('hidden');
+    if (DOM.gemMessagesList) {
+      DOM.gemMessagesList.classList.remove('hidden');
+      renderChatMessages();
+    }
+  }
+}
+
+// Render all chat messages into the stream
+function renderChatMessages() {
+  if (!DOM.gemMessagesList) return;
+
+  const currentGem = state.gemState.gems.find(g => g.id === state.gemState.activeGemId) || state.gemState.gems[0];
+
+  DOM.gemMessagesList.innerHTML = state.gemState.messages.map(msg => {
+    if (msg.role === 'user') {
+      return `
+        <div class="gem-msg-row user" id="${msg.id}">
+          <div class="gem-msg-bubble user">
+            <div class="gem-msg-text">${escapeHtml(msg.content).replace(/\n/g, '<br>')}</div>
+          </div>
+          <div class="gem-msg-avatar user" title="Bạn">👤</div>
+        </div>
+      `;
+    } else {
+      const msgGem = state.gemState.gems.find(g => g.id === msg.gemId) || currentGem;
+      const isPending = !msg.content && state.gemState.isGenerating;
+      const formattedContent = msg.content ? formatChatMessageText(msg.content) : '';
+
+      return `
+        <div class="gem-msg-row assistant" id="${msg.id}">
+          <div class="gem-msg-avatar assistant" title="${escapeHtml(msgGem ? msgGem.name : 'Gem')}">
+            ${msgGem ? msgGem.icon : '💎'}
+          </div>
+          <div class="gem-msg-bubble assistant">
+            <div class="gem-msg-author-bar">
+              <span class="gem-msg-author-name">${escapeHtml(msgGem ? msgGem.name : 'Gem Assistant')}</span>
+              <span class="gem-msg-author-cmd">/${escapeHtml(msgGem ? msgGem.slug : 'gem')}</span>
+              <button type="button" class="btn-copy-gem-msg" data-msg-id="${msg.id}" title="Sao chép câu trả lời">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>Sao chép</span>
+              </button>
+            </div>
+            <div class="gem-msg-markdown">
+              ${isPending ? `
+                <div class="gem-typing-dots">
+                  <span></span><span></span><span></span>
+                </div>
+              ` : formattedContent}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }).join('');
+
+  scrollGemChatToBottom();
+}
+
+// Scroll chat container smoothly or instantly to bottom
+function scrollGemChatToBottom() {
+  if (DOM.gemChatScroll) {
+    DOM.gemChatScroll.scrollTop = DOM.gemChatScroll.scrollHeight;
+  }
+}
+
+// Markdown formatting for Chat Assistant messages
+function formatChatMessageText(rawText) {
+  if (!rawText) return '';
+
+  let text = rawText;
+
+  // 1. Extract code blocks ```lang\ncode\n```
+  const codeBlocks = [];
+  text = text.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+    const placeholder = `__GEM_CODE_BLOCK_${codeBlocks.length}__`;
+    codeBlocks.push({ lang: lang || 'code', code: code.trim() });
+    return placeholder;
+  });
+
+  // 2. Escape HTML
+  text = escapeHtml(text);
+
+  // 3. Inline code `code`
+  text = text.replace(/`([^`]+)`/g, '<code class="gem-inline-code">$1</code>');
+
+  // 4. Headers ###, ##, #
+  text = text.replace(/^### (.*$)/gim, '<h4 class="gem-md-h4">$1</h4>');
+  text = text.replace(/^## (.*$)/gim, '<h3 class="gem-md-h3">$1</h3>');
+  text = text.replace(/^# (.*$)/gim, '<h2 class="gem-md-h2">$1</h2>');
+
+  // 5. Bold & Italic
+  text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+  // 6. Bullet lists
+  text = text.replace(/^[\*\-•] (.*$)/gim, '<li class="gem-md-li">$1</li>');
+
+  // 7. Numbered lists
+  text = text.replace(/^(\d+)\. (.*$)/gim, '<li class="gem-md-oli"><span class="gem-md-num">$1.</span> $2</li>');
+
+  // 8. Line breaks
+  text = text.replace(/\n\n+/g, '</p><p class="gem-md-p">');
+  text = text.replace(/\n/g, '<br>');
+  text = `<p class="gem-md-p">${text}</p>`;
+
+  // Clean empty paragraphs
+  text = text.replace(/<p class="gem-md-p">\s*<\/p>/g, '');
+
+  // 9. Restore code blocks with Copy Button
+  codeBlocks.forEach((item, idx) => {
+    const escapedCode = escapeHtml(item.code);
+    const blockHtml = `
+      <div class="gem-code-block">
+        <div class="gem-code-header">
+          <span class="gem-code-lang">${escapeHtml(item.lang)}</span>
+          <button type="button" class="btn-copy-code" onclick="window.copyGemCodeBlock(this)">Sao chép mã</button>
+        </div>
+        <pre class="gem-code-pre"><code>${escapedCode}</code></pre>
+      </div>
+    `;
+    text = text.replace(`__GEM_CODE_BLOCK_${idx}__`, blockHtml);
+  });
+
+  return text;
+}
+
+// Global helper for code block copy in chat
+window.copyGemCodeBlock = async function(btn) {
+  try {
+    const codeEl = btn.closest('.gem-code-block')?.querySelector('code');
+    if (!codeEl) return;
+    await navigator.clipboard.writeText(codeEl.textContent);
+    const orig = btn.textContent;
+    btn.textContent = '✓ ĐÃ CHÉP';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+    showToast('Đã sao chép đoạn mã vào Clipboard!', 'success', 1500);
+  } catch (err) {
+    showToast('Không thể sao chép đoạn mã!', 'danger');
+  }
+};
+
+// Start Gem Chat Generation with AI
+async function startGemChatGeneration() {
+  if (state.gemState.isGenerating) return;
+
+  let rawPrompt = (DOM.inputGemChat?.value || '').trim();
+  if (!rawPrompt) {
+    showToast('Vui lòng nhập tin nhắn trước khi gửi!', 'warning');
+    if (DOM.inputGemChat) DOM.inputGemChat.focus();
+    return;
+  }
+
+  // Hide slash popover if open
+  if (DOM.gemSlashPopover) DOM.gemSlashPopover.classList.add('hidden');
+  state.gemState.isSlashOpen = false;
+
+  // Slash command parser: check if prompt starts with /(slug)
+  const slashMatch = rawPrompt.match(/^\/([a-zA-Z0-9_-]+)(?:\s+(.*))?$/s);
+  if (slashMatch) {
+    const targetSlug = slashMatch[1].toLowerCase();
+    const matchedGem = state.gemState.gems.find(g => g.slug.toLowerCase() === targetSlug);
+
+    if (matchedGem) {
+      const remainingPrompt = (slashMatch[2] || '').trim();
+
+      // If user typed /(slug) with no question, expand full instructions into textarea!
+      if (!remainingPrompt) {
+        insertGemInstructionsIntoInput(matchedGem);
+        return;
+      }
+
+      // If user typed /(slug) [câu hỏi], expand into full instructions with question!
+      insertGemInstructionsIntoInput(matchedGem, remainingPrompt);
+      return;
+    }
+  }
+
+  // Parse if rawPrompt is an expanded instruction template:
+  // [CHỈ DẪN HỆ THỐNG - ...]:
+  // ...
+  // ---
+  // [YÊU CẦU CỦA BẠN]: ...
+  let systemPrompt = '';
+  let displayUserText = rawPrompt;
+  let userQueryText = rawPrompt;
+
+  const instructionMatch = rawPrompt.match(/^\[CHỈ DẪN HỆ THỐNG - ([^\]]+)\]:\s*([\s\S]*?)(?:\n\s*---\s*\n(?:\[YÊU CẦU CỦA BẠN\]:)?\s*([\s\S]*))?$/);
+  if (instructionMatch) {
+    const gemTitle = instructionMatch[1].trim();
+    const customInstructions = instructionMatch[2].trim();
+    const userQuery = (instructionMatch[3] || '').trim();
+
+    if (!userQuery) {
+      showToast('Vui lòng nhập nội dung câu hỏi sau dòng [YÊU CẦU CỦA BẠN]:', 'warning', 3000);
+      if (DOM.inputGemChat) {
+        DOM.inputGemChat.focus();
+        DOM.inputGemChat.selectionStart = DOM.inputGemChat.selectionEnd = DOM.inputGemChat.value.length;
+      }
+      return;
+    }
+
+    systemPrompt = `BỘ CHỈ DẪN HỆ THỐNG CHO TRỢ LÝ (${gemTitle}):
+${customInstructions}
+
+QUY TẮC PHẢN HỒI THỰC THI:
+- Luôn nhập vai 100% theo đúng tính cách, tôn chỉ và bộ kỹ năng chuyên sâu đã mô tả ở trên.
+- Sử dụng ngôn ngữ tự nhiên, mạch lạc, tôn trọng người dùng. Trình bày rõ ràng bằng Markdown (dùng tiêu đề, gạch đầu dòng, khối code khi cần).
+- Nếu người dùng yêu cầu viết kịch bản, tuân thủ tiêu chuẩn thuần lời đọc (Pure Voiceover), không chèn timeline hay visual cues giả định.`;
+
+    userQueryText = userQuery;
+    displayUserText = `**[Chỉ dẫn: ${gemTitle}]**\n\n${userQuery}`;
+  } else {
+    const activeGem = state.gemState.gems.find(g => g.id === state.gemState.activeGemId) || (state.gemState.gems.length > 0 ? state.gemState.gems[0] : null);
+    if (activeGem) {
+      systemPrompt = `BỘ CHỈ DẪN HỆ THỐNG CỦA GEM "${activeGem.name.toUpperCase()}":
+${activeGem.instructions}
+
+QUY TẮC PHẢN HỒI THỰC THI:
+- Luôn nhập vai 100% theo đúng tính cách, tôn chỉ và bộ kỹ năng chuyên sâu của Gem đã mô tả ở trên.
+- Sử dụng ngôn ngữ tự nhiên, mạch lạc, tôn trọng người dùng. Trình bày rõ ràng bằng Markdown (dùng tiêu đề, gạch đầu dòng, khối code khi cần).
+- Nếu người dùng yêu cầu viết kịch bản, tuân thủ tiêu chuẩn thuần lời đọc (Pure Voiceover), không chèn timeline hay visual cues giả định.`;
+    } else {
+      systemPrompt = `Bạn là Trợ lý AI chuyên sâu về sáng tạo nội dung YouTube, kịch bản, ý tưởng và tối ưu SEO.
+QUY TẮC PHẢN HỒI THỰC THI:
+- Phản hồi thông minh, trực diện, chuyên nghiệp. Trình bày rõ ràng bằng Markdown.
+- Nếu người dùng yêu cầu viết kịch bản, tuân thủ tiêu chuẩn thuần lời đọc (Pure Voiceover), không chèn timeline hay visual cues giả định.`;
+    }
+  }
+
+  // Get active provider & model
+  const provider = state.settings.providers.find(p => p.id === state.settings.activeProviderId);
+  if (!provider || !provider.apiKey) {
+    showToast('Vui lòng cấu hình API Key trong Cài đặt trước khi trò chuyện!', 'warning');
+    switchMainView('settings', 'apikeys');
+    return;
+  }
+
+  const isGemini = (provider.providerType === 'gemini')
+    || (provider.apiKey && provider.apiKey.trim().startsWith('AIzaSy'))
+    || (provider.baseUrl && provider.baseUrl.includes('googleapis.com'));
+
+  let candidateModels = [];
+  if (provider.models && provider.models.length > 0) {
+    candidateModels = provider.models.map(m => (typeof m === 'string' ? m : m.id)).filter(Boolean);
+  } else if (isGemini) {
+    candidateModels = GEMINI_DEFAULT_MODELS.map(m => m.id);
+  }
+
+  const modelId = state.settings.activeModelId || candidateModels[0];
+  if (!modelId) {
+    showToast('Chưa chọn model AI nào trên thanh tiêu đề!', 'warning');
+    return;
+  }
+
+  const activeGem = state.gemState.gems.find(g => g.id === state.gemState.activeGemId) || (state.gemState.gems.length > 0 ? state.gemState.gems[0] : null);
+
+  // 1. Push user message
+  const userMsgId = 'msg_user_' + Date.now();
+  state.gemState.messages.push({
+    id: userMsgId,
+    role: 'user',
+    content: displayUserText,
+    timestamp: Date.now()
+  });
+
+  // 2. Push assistant pending message
+  const assistantMsgId = 'msg_ai_' + (Date.now() + 1);
+  const assistantMsgObj = {
+    id: assistantMsgId,
+    role: 'assistant',
+    gemId: activeGem ? activeGem.id : null,
+    content: '',
+    timestamp: Date.now()
+  };
+  state.gemState.messages.push(assistantMsgObj);
+
+  // Clear input
+  if (DOM.inputGemChat) {
+    DOM.inputGemChat.value = '';
+    adjustGemTextareaHeight();
+  }
+  if (DOM.gemInputContextBar) {
+    DOM.gemInputContextBar.classList.add('hidden');
+  }
+  if (DOM.gemStarterChips) {
+    DOM.gemStarterChips.classList.remove('hidden');
+  }
+
+  // Update UI state to generating
+  setGemGeneratingUIState(true);
+  renderGemChatUI();
+
+  state.gemState.abortController = new AbortController();
+
+  try {
+    const baseUrl = resolveBaseUrl(provider);
+    const endpoint = `${baseUrl}/chat/completions`;
+
+    // Construct conversation history (last 8 messages for context)
+    const recentMessages = state.gemState.messages
+      .filter(m => m.id !== assistantMsgId && m.content)
+      .slice(-8)
+      .map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.content
+      }));
+
+    if (recentMessages.length > 0 && recentMessages[recentMessages.length - 1].role === 'user') {
+      recentMessages[recentMessages.length - 1].content = userQueryText;
+    }
+
+    const apiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...recentMessages
+    ];
+
+    const payload = {
+      model: modelId,
+      messages: apiMessages,
+      temperature: 0.7,
+      stream: true
+    };
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${provider.apiKey}`
+      },
+      body: JSON.stringify(payload),
+      signal: state.gemState.abortController.signal
+    });
+
+    if (!response.ok) {
+      let errDetails = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errJson = await response.json();
+        if (errJson.error && errJson.error.message) {
+          errDetails = errJson.error.message;
+        }
+      } catch (e) {}
+      throw new Error(errDetails);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) continue;
+        if (trimmed === 'data: [DONE]') continue;
+
+        try {
+          const jsonStr = trimmed.replace(/^data:\s*/, '');
+          const parsed = JSON.parse(jsonStr);
+          const delta = parsed.choices?.[0]?.delta;
+          const chunk = delta?.content || delta?.text || '';
+
+          if (chunk) {
+            assistantMsgObj.content += chunk;
+            updateAssistantBubbleContent(assistantMsgId, assistantMsgObj.content);
+          }
+        } catch (err) {}
+      }
+    }
+
+    // Finished generation
+    setGemGeneratingUIState(false);
+    updateAssistantBubbleContent(assistantMsgId, assistantMsgObj.content, true);
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      showToast('Đã dừng cuộc trò chuyện!', 'info', 1500);
+      assistantMsgObj.content += '\n\n*(Đã dừng bởi người dùng)*';
+    } else {
+      console.error('Lỗi Gem Chat:', err);
+      showToast(`Lỗi Gem Chat: ${err.message}`, 'danger', 4000);
+      assistantMsgObj.content = `⚠️ **Lỗi kết nối AI:** ${escapeHtml(err.message)}\n\n*Vui lòng kiểm tra lại API Key, Model hoặc kết nối mạng.*`;
+    }
+    setGemGeneratingUIState(false);
+    renderChatMessages();
+  }
+}
+
+// Stop current chat generation
+function stopGemChatGeneration() {
+  if (state.gemState.abortController) {
+    state.gemState.abortController.abort();
+  }
+  setGemGeneratingUIState(false);
+}
+
+// Set UI state during chat generation
+function setGemGeneratingUIState(isGen) {
+  state.gemState.isGenerating = isGen;
+
+  if (DOM.btnGemSend) {
+    if (isGen) {
+      DOM.btnGemSend.classList.add('generating');
+      DOM.btnGemSend.title = 'Dừng tạo (Stop)';
+      DOM.btnGemSend.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 14px; height: 14px;">
+          <rect x="6" y="6" width="12" height="12" rx="2"></rect>
+        </svg>
+      `;
+    } else {
+      DOM.btnGemSend.classList.remove('generating');
+      DOM.btnGemSend.title = 'Gửi tin nhắn (Enter)';
+      DOM.btnGemSend.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      `;
+    }
+  }
+}
+
+// Update specific assistant message bubble during stream
+function updateAssistantBubbleContent(msgId, content, isFinal = false) {
+  const row = document.getElementById(msgId);
+  if (!row) return;
+
+  const mdContainer = row.querySelector('.gem-msg-markdown');
+  if (mdContainer) {
+    mdContainer.innerHTML = formatChatMessageText(content);
+  }
+
+  scrollGemChatToBottom();
+}
+
+// Adjust chat textarea height dynamically
+function adjustGemTextareaHeight() {
+  if (!DOM.inputGemChat) return;
+  DOM.inputGemChat.style.height = 'auto';
+  // Allow expanding up to 480px to accommodate full Gem instructions
+  const newHeight = Math.min(Math.max(DOM.inputGemChat.scrollHeight, 40), 480);
+  DOM.inputGemChat.style.height = `${newHeight}px`;
+}
+
+// Autocomplete logic for / slash commands
+function setupSlashCommandAutocomplete() {
+  if (!DOM.inputGemChat || !DOM.gemSlashPopover) return;
+
+  DOM.inputGemChat.addEventListener('input', () => {
+    adjustGemTextareaHeight();
+
+    const val = DOM.inputGemChat.value;
+
+    // Auto-hide context bar if user deletes or replaces the instruction template
+    if (DOM.gemInputContextBar && !DOM.gemInputContextBar.classList.contains('hidden')) {
+      if (!val.includes('[CHỈ DẪN HỆ THỐNG')) {
+        DOM.gemInputContextBar.classList.add('hidden');
+        if (DOM.gemStarterChips) {
+          DOM.gemStarterChips.classList.remove('hidden');
+        }
+      }
+    }
+
+    const cursorPos = DOM.inputGemChat.selectionStart;
+    const textBeforeCursor = val.slice(0, cursorPos);
+
+    const slashMatch = textBeforeCursor.match(/(?:^|\s)\/([a-zA-Z0-9_-]*)$/);
+
+    if (slashMatch) {
+      const query = slashMatch[1].toLowerCase();
+      const filteredGems = state.gemState.gems.filter(g => 
+        g.slug.toLowerCase().includes(query) || g.name.toLowerCase().includes(query)
+      );
+
+      if (filteredGems.length > 0) {
+        state.gemState.slashSelectedIndex = 0;
+        state.gemState.isSlashOpen = true;
+        renderSlashPopoverItems(filteredGems);
+        DOM.gemSlashPopover.classList.remove('hidden');
+      } else {
+        DOM.gemSlashPopover.classList.add('hidden');
+        state.gemState.isSlashOpen = false;
+      }
+    } else {
+      DOM.gemSlashPopover.classList.add('hidden');
+      state.gemState.isSlashOpen = false;
+    }
+  });
+
+  DOM.inputGemChat.addEventListener('keydown', (e) => {
+    if (state.gemState.isSlashOpen && !DOM.gemSlashPopover.classList.contains('hidden')) {
+      const items = DOM.gemSlashItems.querySelectorAll('.gem-slash-item');
+      if (items.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          state.gemState.slashSelectedIndex = (state.gemState.slashSelectedIndex + 1) % items.length;
+          highlightSlashItem(items);
+          return;
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          state.gemState.slashSelectedIndex = (state.gemState.slashSelectedIndex - 1 + items.length) % items.length;
+          highlightSlashItem(items);
+          return;
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          const selectedItem = items[state.gemState.slashSelectedIndex];
+          if (selectedItem) {
+            const gemId = selectedItem.getAttribute('data-gem-id');
+            selectSlashGem(gemId);
+          }
+          return;
+        } else if (e.key === 'Escape') {
+          DOM.gemSlashPopover.classList.add('hidden');
+          state.gemState.isSlashOpen = false;
+          return;
+        }
+      }
+    }
+
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      startGemChatGeneration();
+    }
+  });
+}
+
+function renderSlashPopoverItems(gems) {
+  if (!DOM.gemSlashItems) return;
+
+  DOM.gemSlashItems.innerHTML = gems.map((g, idx) => `
+    <div class="gem-slash-item ${idx === state.gemState.slashSelectedIndex ? 'selected' : ''}" data-gem-id="${g.id}">
+      <span class="gem-slash-item-icon">${g.icon}</span>
+      <div class="gem-slash-item-body">
+        <div class="gem-slash-item-title-row">
+          <span class="gem-slash-item-name">${escapeHtml(g.name)}</span>
+          <span class="gem-slash-item-cmd">/${escapeHtml(g.slug)}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function highlightSlashItem(items) {
+  items.forEach((item, idx) => {
+    if (idx === state.gemState.slashSelectedIndex) {
+      item.classList.add('selected');
+      item.scrollIntoView({ block: 'nearest' });
+    } else {
+      item.classList.remove('selected');
+    }
+  });
+}
+
+function selectSlashGem(gemId) {
+  const gem = state.gemState.gems.find(g => g.id === gemId);
+  if (!gem) return;
+
+  insertGemInstructionsIntoInput(gem);
+}
+
+// Render Gem cards in Settings ("Quản lý Gem")
+function renderSettingsGems() {
+  if (!DOM.gemSettingsCardsGrid) return;
+
+  if (!state.gemState.gems || state.gemState.gems.length === 0) {
+    DOM.gemSettingsCardsGrid.innerHTML = `
+      <div class="gem-settings-empty">
+        <div class="gem-empty-icon">💎</div>
+        <div class="gem-empty-title">Chưa có Gem nào trong hệ thống</div>
+        <p class="gem-empty-desc">Tạo Gem để định hình các kỹ năng chuyên sâu và gọi nhanh trong khung chat bằng lệnh tắt <code>/(tên_gem)</code>.</p>
+        <button type="button" class="btn-primary-action" id="btnEmptyCreateGem">+ Tạo Gem đầu tiên</button>
+      </div>
+    `;
+    const emptyBtn = document.getElementById('btnEmptyCreateGem');
+    if (emptyBtn) emptyBtn.addEventListener('click', openCreateGemModal);
+    return;
+  }
+
+  DOM.gemSettingsCardsGrid.innerHTML = state.gemState.gems.map(g => `
+    <div class="gem-card-item" data-gem-id="${g.id}">
+      <div class="gem-card-top-row">
+        <div class="gem-card-title-group">
+          <div class="gem-card-icon-wrap">
+            <span class="gem-card-icon">${g.icon || '💎'}</span>
+          </div>
+          <div class="gem-card-meta">
+            <div class="gem-card-name" title="${escapeHtml(g.name)}">${escapeHtml(g.name)}</div>
+            <span class="gem-card-cmd-badge">/${escapeHtml(g.slug)}</span>
+          </div>
+        </div>
+        <div class="gem-card-actions">
+          <button type="button" class="btn-gem-card-action icon-only" data-action="edit" data-id="${g.id}" title="Chỉnh sửa Gem">
+            <svg class="gem-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+          </button>
+          <button type="button" class="btn-gem-card-action icon-only" data-action="duplicate" data-id="${g.id}" title="Nhân bản Gem">
+            <svg class="gem-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+          <button type="button" class="btn-gem-card-action icon-only danger" data-action="delete" data-id="${g.id}" title="Xóa Gem">
+            <svg class="gem-action-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Open modal to create a new Gem
+function openCreateGemModal() {
+  if (!DOM.modalGemEdit) return;
+
+  if (DOM.inputGemId) DOM.inputGemId.value = '';
+  if (DOM.inputGemName) DOM.inputGemName.value = '';
+  if (DOM.inputGemSlug) DOM.inputGemSlug.value = '';
+  if (DOM.inputGemIcon) DOM.inputGemIcon.value = '💎';
+  if (DOM.gemModalIconBadge) DOM.gemModalIconBadge.textContent = '💎';
+  if (DOM.inputGemInstructions) DOM.inputGemInstructions.value = '';
+  if (DOM.gemModalTitle) DOM.gemModalTitle.textContent = 'Tạo Gem Mới';
+  if (DOM.gemModalStatusMsg) DOM.gemModalStatusMsg.textContent = '';
+
+  DOM.modalGemEdit.classList.remove('hidden');
+  if (DOM.inputGemName) DOM.inputGemName.focus();
+}
+
+// Open modal to edit an existing Gem
+function openEditGemModal(gemId) {
+  const gem = state.gemState.gems.find(g => g.id === gemId);
+  if (!gem || !DOM.modalGemEdit) return;
+
+  if (DOM.inputGemId) DOM.inputGemId.value = gem.id;
+  if (DOM.inputGemName) DOM.inputGemName.value = gem.name || '';
+  if (DOM.inputGemSlug) DOM.inputGemSlug.value = gem.slug || '';
+  if (DOM.inputGemIcon) DOM.inputGemIcon.value = gem.icon || '💎';
+  if (DOM.gemModalIconBadge) DOM.gemModalIconBadge.textContent = gem.icon || '💎';
+  if (DOM.inputGemInstructions) DOM.inputGemInstructions.value = gem.instructions || '';
+  if (DOM.gemModalTitle) DOM.gemModalTitle.textContent = 'Chỉnh sửa Gem';
+  if (DOM.gemModalStatusMsg) DOM.gemModalStatusMsg.textContent = '';
+
+  DOM.modalGemEdit.classList.remove('hidden');
+  if (DOM.inputGemName) DOM.inputGemName.focus();
+}
+
+// Close Gem edit modal
+function closeGemModal() {
+  if (DOM.modalGemEdit) {
+    DOM.modalGemEdit.classList.add('hidden');
+  }
+}
+
+// Save Gem from modal
+function saveGemModal() {
+  const id = (DOM.inputGemId?.value || '').trim();
+  const name = (DOM.inputGemName?.value || '').trim();
+  let slug = (DOM.inputGemSlug?.value || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+  const icon = (DOM.inputGemIcon?.value || '').trim() || '💎';
+  const instructions = (DOM.inputGemInstructions?.value || '').trim();
+
+  if (!name) {
+    if (DOM.gemModalStatusMsg) DOM.gemModalStatusMsg.textContent = 'Vui lòng nhập Tên Gem!';
+    DOM.inputGemName?.focus();
+    return;
+  }
+
+  if (!slug) {
+    if (DOM.gemModalStatusMsg) DOM.gemModalStatusMsg.textContent = 'Vui lòng nhập Lệnh gọi tắt hợp lệ!';
+    DOM.inputGemSlug?.focus();
+    return;
+  }
+
+  if (!instructions) {
+    if (DOM.gemModalStatusMsg) DOM.gemModalStatusMsg.textContent = 'Vui lòng nhập Bộ chỉ dẫn hệ thống!';
+    DOM.inputGemInstructions?.focus();
+    return;
+  }
+
+  // Check unique slug among other gems
+  const isDuplicateSlug = state.gemState.gems.some(g => g.slug === slug && g.id !== id);
+  if (isDuplicateSlug) {
+    if (DOM.gemModalStatusMsg) DOM.gemModalStatusMsg.textContent = `Lệnh gọi tắt "/${slug}" đã tồn tại! Vui lòng chọn lệnh khác.`;
+    DOM.inputGemSlug?.focus();
+    return;
+  }
+
+  if (id) {
+    // Update existing Gem
+    const idx = state.gemState.gems.findIndex(g => g.id === id);
+    if (idx !== -1) {
+      state.gemState.gems[idx] = {
+        ...state.gemState.gems[idx],
+        name,
+        slug,
+        icon,
+        instructions
+      };
+      showToast(`Đã cập nhật Gem "${name}"!`, 'success', 2000);
+    }
+  } else {
+    // Create new Gem
+    const newId = 'gem_' + Date.now();
+    const newGem = {
+      id: newId,
+      name,
+      slug,
+      icon,
+      instructions
+    };
+    state.gemState.gems.push(newGem);
+    showToast(`Đã tạo thành công Gem "${name}"!`, 'success', 2000);
+  }
+
+  saveGemsToStorage();
+  renderActiveGemSelector();
+  renderSettingsGems();
+  closeGemModal();
+}
+
+// Delete Gem
+function deleteGem(gemId) {
+  const target = state.gemState.gems.find(g => g.id === gemId);
+  const name = target ? target.name : 'Gem';
+
+  if (!confirm(`Bạn có chắc chắn muốn xóa Gem "${name}" không?`)) {
+    return;
+  }
+
+  state.gemState.gems = state.gemState.gems.filter(g => g.id !== gemId);
+
+  if (state.gemState.activeGemId === gemId) {
+    state.gemState.activeGemId = state.gemState.gems.length > 0 ? state.gemState.gems[0].id : null;
+  }
+
+  saveGemsToStorage();
+  renderActiveGemSelector();
+  renderSettingsGems();
+  renderGemStarterChips();
+  showToast(`Đã xóa Gem "${name}"!`, 'info', 1800);
+}
+
+// Duplicate Gem
+function duplicateGem(gemId) {
+  const target = state.gemState.gems.find(g => g.id === gemId);
+  if (!target) return;
+
+  const newSlug = (target.slug + '_copy').slice(0, 30);
+  const newGem = {
+    ...target,
+    id: 'gem_' + Date.now(),
+    name: `${target.name} (Bản sao)`,
+    slug: newSlug
+  };
+
+  state.gemState.gems.push(newGem);
+  saveGemsToStorage();
+  renderActiveGemSelector();
+  renderSettingsGems();
+  showToast(`Đã nhân bản Gem "${newGem.name}"!`, 'success', 2000);
+}
+
+// Bind all Gem-related event listeners
+function bindGemEvents() {
+  // 1. Gem Selector Dropdown
+  if (DOM.btnGemActiveSelector) {
+    DOM.btnGemActiveSelector.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (DOM.gemDropdownMenu) {
+        DOM.gemDropdownMenu.classList.toggle('hidden');
+      }
+    });
+  }
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (DOM.gemDropdownMenu && !DOM.gemDropdownMenu.classList.contains('hidden')) {
+      if (!DOM.btnGemActiveSelector?.contains(e.target) && !DOM.gemDropdownMenu.contains(e.target)) {
+        DOM.gemDropdownMenu.classList.add('hidden');
+      }
+    }
+
+    if (DOM.gemSlashPopover && !DOM.gemSlashPopover.classList.contains('hidden')) {
+      if (!DOM.inputGemChat?.contains(e.target) && !DOM.gemSlashPopover.contains(e.target)) {
+        DOM.gemSlashPopover.classList.add('hidden');
+        state.gemState.isSlashOpen = false;
+      }
+    }
+  });
+
+  // Dropdown list click delegation
+  if (DOM.gemDropdownList) {
+    DOM.gemDropdownList.addEventListener('click', (e) => {
+      const item = e.target.closest('.gem-dropdown-item');
+      if (item) {
+        const gemId = item.getAttribute('data-gem-id');
+        setActiveGem(gemId);
+      }
+    });
+  }
+
+  // 2. New Chat Button
+  if (DOM.btnGemNewChat) {
+    DOM.btnGemNewChat.addEventListener('click', () => {
+      if (state.gemState.isGenerating) {
+        stopGemChatGeneration();
+      }
+      state.gemState.messages = [];
+      renderGemChatUI();
+      if (DOM.inputGemChat) {
+        DOM.inputGemChat.value = '';
+        DOM.inputGemChat.focus();
+        adjustGemTextareaHeight();
+      }
+      if (DOM.gemInputContextBar) {
+        DOM.gemInputContextBar.classList.add('hidden');
+      }
+      if (DOM.gemStarterChips) {
+        DOM.gemStarterChips.classList.remove('hidden');
+      }
+      showToast('Đã bắt đầu cuộc trò chuyện mới!', 'info', 1500);
+    });
+  }
+
+  // Clear Gem Instruction Context Bar button
+  if (DOM.btnClearGemInstruction) {
+    DOM.btnClearGemInstruction.addEventListener('click', () => {
+      if (DOM.inputGemChat) {
+        DOM.inputGemChat.value = '';
+        adjustGemTextareaHeight();
+        DOM.inputGemChat.focus();
+      }
+      if (DOM.gemInputContextBar) {
+        DOM.gemInputContextBar.classList.add('hidden');
+      }
+      if (DOM.gemStarterChips) {
+        DOM.gemStarterChips.classList.remove('hidden');
+      }
+      showToast('Đã hủy chỉ dẫn Gem, quay về chat tự do', 'info', 1500);
+    });
+  }
+
+  // 3. Send / Stop button
+  if (DOM.btnGemSend) {
+    DOM.btnGemSend.addEventListener('click', () => {
+      if (state.gemState.isGenerating) {
+        stopGemChatGeneration();
+      } else {
+        startGemChatGeneration();
+      }
+    });
+  }
+
+  // 4. Starter chip clicks (Call entire Gem instructions directly)
+  if (DOM.gemStarterChips) {
+    DOM.gemStarterChips.addEventListener('click', (e) => {
+      const chip = e.target.closest('.gem-starter-chip');
+      if (chip) {
+        const gemId = chip.getAttribute('data-gem-id');
+        const gem = state.gemState.gems.find(g => g.id === gemId);
+        if (gem) {
+          insertGemInstructionsIntoInput(gem);
+        }
+      }
+    });
+  }
+
+  // 5. Slash Popover item clicks
+  if (DOM.gemSlashItems) {
+    DOM.gemSlashItems.addEventListener('click', (e) => {
+      const item = e.target.closest('.gem-slash-item');
+      if (item) {
+        const gemId = item.getAttribute('data-gem-id');
+        selectSlashGem(gemId);
+      }
+    });
+  }
+
+  // 6. Copy message button delegation in chat
+  if (DOM.gemMessagesList) {
+    DOM.gemMessagesList.addEventListener('click', async (e) => {
+      const copyBtn = e.target.closest('.btn-copy-gem-msg');
+      if (copyBtn) {
+        const msgId = copyBtn.getAttribute('data-msg-id');
+        const msg = state.gemState.messages.find(m => m.id === msgId);
+        if (msg && msg.content) {
+          try {
+            await navigator.clipboard.writeText(msg.content);
+            const span = copyBtn.querySelector('span');
+            const orig = span ? span.textContent : 'Sao chép';
+            if (span) span.textContent = '✓ ĐÃ CHÉP';
+            setTimeout(() => { if (span) span.textContent = orig; }, 1500);
+            showToast('Đã sao chép phản hồi vào Clipboard!', 'success', 1500);
+          } catch (err) {
+            showToast('Không thể sao chép!', 'danger');
+          }
+        }
+      }
+    });
+  }
+
+  // 7. Settings Gem Grid Actions
+  if (DOM.gemSettingsCardsGrid) {
+    DOM.gemSettingsCardsGrid.addEventListener('click', (e) => {
+      const actionBtn = e.target.closest('.btn-gem-card-action');
+      if (!actionBtn) return;
+
+      const action = actionBtn.getAttribute('data-action');
+      const id = actionBtn.getAttribute('data-id');
+
+      if (action === 'edit') {
+        openEditGemModal(id);
+      } else if (action === 'duplicate') {
+        duplicateGem(id);
+      } else if (action === 'delete') {
+        deleteGem(id);
+      }
+    });
+  }
+
+  // 8. Open Create Gem Modal Button
+  if (DOM.btnOpenCreateGemModal) {
+    DOM.btnOpenCreateGemModal.addEventListener('click', openCreateGemModal);
+  }
+
+  // 9. Modal Close & Cancel
+  if (DOM.btnCloseGemModal) {
+    DOM.btnCloseGemModal.addEventListener('click', closeGemModal);
+  }
+  if (DOM.btnCancelGemModal) {
+    DOM.btnCancelGemModal.addEventListener('click', closeGemModal);
+  }
+
+  // 10. Modal Save
+  if (DOM.btnSaveGemModal) {
+    DOM.btnSaveGemModal.addEventListener('click', saveGemModal);
+  }
+
+  // 11. Quick Icon Picker in Modal
+  const quickIconButtons = document.querySelectorAll('.btn-quick-icon');
+  quickIconButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const icon = btn.textContent.trim();
+      if (DOM.inputGemIcon) DOM.inputGemIcon.value = icon;
+      if (DOM.gemModalIconBadge) DOM.gemModalIconBadge.textContent = icon;
+    });
+  });
+
+  // Sync icon input changes to modal icon badge
+  if (DOM.inputGemIcon) {
+    DOM.inputGemIcon.addEventListener('input', () => {
+      const val = DOM.inputGemIcon.value.trim() || '💎';
+      if (DOM.gemModalIconBadge) DOM.gemModalIconBadge.textContent = val;
+    });
+  }
+
+  // 12. Setup Slash Command Autocomplete
+  setupSlashCommandAutocomplete();
+}
+
 // Start Application
 window.addEventListener('DOMContentLoaded', initApp);
+
 
