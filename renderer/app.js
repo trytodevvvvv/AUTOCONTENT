@@ -1197,10 +1197,18 @@ function checkReadiness() {
 // ===================================================================
 // INPUT METRICS
 // ===================================================================
+function countWordsFast(str) {
+  if (!str) return 0;
+  let count = 0;
+  const re = /\S+/g;
+  while (re.exec(str) !== null) count++;
+  return count;
+}
+
 function updateInputMetrics() {
   const text = DOM.inputOriginal.value || '';
   const chars = text.length;
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const words = countWordsFast(text);
 
   DOM.inputCharCount.textContent = `${chars.toLocaleString()} ký tự`;
   DOM.inputWordCount.textContent = `${words.toLocaleString()} từ`;
@@ -2960,7 +2968,7 @@ function dismissToast() {
 function updateTitleInputCounts() {
   const text = (DOM.inputOriginalTitle?.value || '').trim();
   const charCount = text.length;
-  const wordCount = text ? text.split(/\s+/).filter(Boolean).length : 0;
+  const wordCount = countWordsFast(text);
 
   if (DOM.titleCharCount) DOM.titleCharCount.textContent = `${charCount} ký tự`;
   if (DOM.titleWordCount) DOM.titleWordCount.textContent = `${wordCount} từ`;
@@ -3835,65 +3843,77 @@ async function copyAllTitlesToClipboard() {
 // MODULE 3: YOUTUBE SEO DESCRIPTION & VIDIQ TAGS CONTROLLER
 // ===================================================================
 
-function updateDescInputCounts() {
+let _descCountDebounceRaf = null;
+
+function updateDescInputCounts(immediate = false) {
   const titleText = (DOM.inputDescTitle?.value || '').trim();
-  const contentText = (DOM.inputDescContent?.value || '').trim();
+  const rawContent = DOM.inputDescContent?.value || '';
 
   if (DOM.descTitleCharCount) {
     DOM.descTitleCharCount.textContent = `${titleText.length} ký tự`;
   }
 
-  const contentCharCount = contentText.length;
-  const contentWordCount = contentText ? contentText.split(/\s+/).filter(Boolean).length : 0;
-
+  const contentCharCount = rawContent.length;
   if (DOM.descContentCharCount) {
     DOM.descContentCharCount.textContent = `${contentCharCount.toLocaleString('vi-VN')} ký tự`;
   }
-  if (DOM.descContentWordCount) {
-    DOM.descContentWordCount.textContent = `${contentWordCount.toLocaleString('vi-VN')} từ`;
+
+  const computeHeavyMetrics = () => {
+    const contentWordCount = countWordsFast(rawContent);
+    if (DOM.descContentWordCount) {
+      DOM.descContentWordCount.textContent = `${contentWordCount.toLocaleString('vi-VN')} từ`;
+    }
+
+    // Tự động nhận diện định dạng kịch bản (Kịch bản văn bản vs Phụ đề SRT)
+    autoDetectDescFormat(false);
+
+    // Tự động nhận diện ngôn ngữ theo nội dung đầu vào (Input)
+    autoDetectDescLanguage();
+
+    checkDescReadiness();
+  };
+
+  if (immediate || contentCharCount < 3000) {
+    computeHeavyMetrics();
+  } else {
+    if (_descCountDebounceRaf) cancelAnimationFrame(_descCountDebounceRaf);
+    _descCountDebounceRaf = requestAnimationFrame(computeHeavyMetrics);
   }
-
-  // Tự động nhận diện định dạng kịch bản (Kịch bản văn bản vs Phụ đề SRT)
-  autoDetectDescFormat(false);
-
-  // Tự động nhận diện ngôn ngữ theo nội dung đầu vào (Input)
-  autoDetectDescLanguage();
-
-  checkDescReadiness();
 }
 
 // Thuật toán nhận diện ngôn ngữ siêu nhanh và chính xác từ văn bản đầu vào (Đạt chuẩn 100% cho 8 ngôn ngữ)
 function detectLanguageFromText(text) {
   if (!text || typeof text !== 'string') return null;
-  const clean = text.trim();
-  if (clean.length < 3) return null;
+  // TỐI ƯU HIỆU NĂNG: Chỉ lấy 1.500 ký tự đầu tiên để nhận diện, loại bỏ 100% hiện tượng đơ khựng khi paste văn bản dài > 15.000 từ!
+  const sample = text.slice(0, 1500).trim();
+  if (sample.length < 3) return null;
 
   // 1. Tiếng Nhật: Nhận diện chữ Hiragana hoặc Katakana đặc trưng
-  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(clean)) return 'ja';
+  if (/[\u3040-\u309F\u30A0-\u30FF]/.test(sample)) return 'ja';
 
   // 2. Tiếng Hàn: Nhận diện khối chữ Hangul
-  if (/[\uAC00-\uD7AF\u1100-\u11FF]/.test(clean)) return 'ko';
+  if (/[\uAC00-\uD7AF\u1100-\u11FF]/.test(sample)) return 'ko';
 
   // 3. Tiếng Trung: Nhận diện chữ Hán CJK (khi không chứa chữ Nhật)
-  if (/[\u4E00-\u9FFF]/.test(clean)) return 'zh';
+  if (/[\u4E00-\u9FFF]/.test(sample)) return 'zh';
 
   // 4. Tiếng Việt: Nhận diện nguyên âm có dấu đặc thù chỉ có trong tiếng Việt
-  if (/[đĐăĂơƠưƯạảầấậẩẫằắặẳẵẹẻềếệểễịỉọỏồốộổỗờớợởỡụủừứựửữỵỷ]/i.test(clean)) return 'vi';
+  if (/[đĐăĂơƠưƯạảầấậẩẫằắặẳẵẹẻềếệểễịỉọỏồốộổỗờớợởỡụủừứựửữỵỷ]/i.test(sample)) return 'vi';
 
-  // Tách từ Unicode chuẩn xác
-  const tokens = new Set(clean.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').split(' ').filter(Boolean));
+  // Tách từ Unicode siêu nhanh trên đoạn mẫu nhỏ
+  const tokens = new Set(sample.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').split(' ').filter(Boolean));
 
   // Kiểm tra từ khóa tiếng Việt không dấu hoặc phổ biến
   if (tokens.has('và') || tokens.has('của') || tokens.has('không') || tokens.has('được') || tokens.has('người') || tokens.has('tại') || tokens.has('sao') || tokens.has('kịch') || tokens.has('bản')) return 'vi';
 
   // 5. Tiếng Bồ Đào Nha / Brasil (Kiểm tra trước tiếng Tây Ban Nha để tránh nhầm lẫn)
-  if (/[çÇãõ]/.test(clean) || tokens.has('você') || tokens.has('voce') || tokens.has('não') || tokens.has('nao') || tokens.has('são') || tokens.has('obrigado') || tokens.has('muito') || tokens.has('ecrã')) {
+  if (/[çÇãõ]/.test(sample) || tokens.has('você') || tokens.has('voce') || tokens.has('não') || tokens.has('nao') || tokens.has('são') || tokens.has('obrigado') || tokens.has('muito') || tokens.has('ecrã')) {
     if (tokens.has('você') || tokens.has('voce') || tokens.has('legal') || tokens.has('cara') || tokens.has('beleza')) return 'br';
     return 'pt';
   }
 
   // 6. Tiếng Tây Ban Nha
-  if (/[¿¡ñÑ]/.test(clean) || tokens.has('el') || tokens.has('la') || tokens.has('los') || tokens.has('las') || tokens.has('del') || tokens.has('como') || tokens.has('pero') || tokens.has('más') || tokens.has('estos') || tokens.has('estas')) return 'es';
+  if (/[¿¡ñÑ]/.test(sample) || tokens.has('el') || tokens.has('la') || tokens.has('los') || tokens.has('las') || tokens.has('del') || tokens.has('como') || tokens.has('pero') || tokens.has('más') || tokens.has('estos') || tokens.has('estas')) return 'es';
 
   // 7. Tiếng Anh: Các từ khóa phổ biến trong tiêu đề / kịch bản tiếng Anh
   if (tokens.has('the') || tokens.has('and') || tokens.has('is') || tokens.has('are') || tokens.has('in') || tokens.has('on') || tokens.has('at') || tokens.has('to') || tokens.has('for') || tokens.has('with') || tokens.has('this') || tokens.has('that') || tokens.has('from') || tokens.has('how') || tokens.has('why') || tokens.has('what') || tokens.has('when') || tokens.has('where') || tokens.has('your') || tokens.has('you')) return 'en';
@@ -3981,11 +4001,12 @@ function checkDescReadiness() {
 // Nhận diện tự động giữa Kịch bản văn bản thuần và Phụ đề SRT (Mốc giờ)
 function detectFormatFromText(text) {
   if (!text || typeof text !== 'string') return null;
-  const clean = text.trim();
-  if (!clean) return null;
+  // TỐI ƯU HIỆU NĂNG: Mốc thời gian SRT luôn xuất hiện ở đầu file, chỉ quét 3.000 ký tự đầu để tránh đơ khựng!
+  const sample = text.slice(0, 3000).trim();
+  if (!sample) return null;
   // Dấu hiệu nhận diện SRT / Subtitles: mốc timeline chứa mũi tên --> (00:00:01,000 --> 00:00:04,500 hoặc 00:01 --> 00:05)
   const srtTimelineRegex = /\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?\s*-->\s*\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?/;
-  if (srtTimelineRegex.test(clean)) {
+  if (srtTimelineRegex.test(sample)) {
     return 'srt';
   }
   return 'plain';
@@ -4117,8 +4138,7 @@ async function pasteDescContent() {
     if (text && DOM.inputDescContent) {
       DOM.inputDescContent.value = text;
       state.descriptionState.isUserManualMode = false;
-      autoDetectDescFormat(true);
-      updateDescInputCounts();
+      updateDescInputCounts(true);
       showToast('Đã dán nội dung kịch bản!', 'success', 1200);
     }
   } catch (e) {
@@ -4290,11 +4310,11 @@ async function startDescriptionGeneration() {
   const dateStr = `Tháng ${now.getMonth() + 1}/${now.getFullYear()}`;
 
   const descPart3Prompt = isSrtMode
-    ? `- Phần 3 (Phân cảnh Chapters & Mốc thời gian thực từ Phụ đề SRT bằng ${targetLangObj.name}):
-  * BẮT BUỘC phân tích các mốc thời gian THỰC TẾ trong phụ đề SRT do người dùng cung cấp và tạo ra 4 đến 8 chapters logic bắt đầu BẮT BUỘC bằng mốc "00:00 - [Tên phân cảnh mở đầu]". Tiêu đề các chapters BẮT BUỘC phải viết bằng ${targetLangObj.name}. Tuyệt đối lấy đúng mốc giờ từ phụ đề.`
-    : `- Phần 3 (Điểm nhấn nội dung & Luận điểm then chốt của video bằng ${targetLangObj.name}):
-  * NGUYÊN TẮC BẢO HIỂM TUYỆT ĐỐI (ZERO-TIMESTAMP RULE): Đây là kịch bản văn bản thuần túy, KHÔNG CÓ dữ liệu thời gian thật. NGHIÊM CẤM TUYỆT ĐỐI không được tự ý bịa đặt hoặc suy diễn các mốc thời gian (CẤM TOÀN BỘ '00:00', 'mm:ss' hoặc bất kỳ con số giờ/phút nào).
-  * Hãy trình bày 3 đến 6 luận điểm nổi bật hoặc điểm nhấn hấp dẫn nhất của video dưới dạng các gạch đầu dòng bullet points (•) thuần chữ bằng ${targetLangObj.name}, kích thích tối đa trí tò mò của khán giả.`;
+    ? `3. ⏱️ TẦNG 3: PHÂN CẢNH CHAPTERS MỐC THỜI GIAN THỰC TỪ SRT
+   * Phân tích các mốc thời gian THỰC TẾ trong phụ đề SRT do người dùng cung cấp và tạo ra 4 đến 8 chapters logic bắt đầu BẮT BUỘC bằng mốc "00:00 - [Tên phân cảnh mở đầu]". Tiêu đề các chapters BẮT BUỘC phải viết bằng ${targetLangObj.name}. Tuyệt đối lấy đúng mốc giờ từ phụ đề.`
+    : `3. 💡 TẦNG 3: ĐIỂM NHẤN NỘI DUNG & LUẬN ĐIỂM THEN CHỐT CỦA VIDEO
+   * NGUYÊN TẮC BẢO HIỂM TUYỆT ĐỐI (ZERO-TIMESTAMP RULE): Đây là kịch bản văn bản thuần túy, KHÔNG CÓ dữ liệu thời gian thật. NGHIÊM CẤM TUYỆT ĐỐI không được tự ý bịa đặt hoặc suy diễn các mốc thời gian (CẤM TOÀN BỘ '00:00', 'mm:ss' hoặc bất kỳ con số giờ/phút nào).
+   * Hãy trình bày 3 đến 6 luận điểm nổi bật hoặc điểm nhấn hấp dẫn nhất của video dưới dạng các gạch đầu dòng bullet points (•) thuần chữ bằng ${targetLangObj.name}, kích thích tối đa trí tò mò của khán giả.`;
 
   const systemPrompt = `Bạn là Chuyên gia hàng đầu thế giới về Tối ưu hóa SEO YouTube và Chuyên gia thuật toán vidIQ (Senior YouTube SEO Specialist & vidIQ Algorithm Master).
 NGỮ CẢNH THỜI GIAN THỰC HIỆN TẠI: ${dateStr}.
@@ -4306,15 +4326,26 @@ HIẾN PHÁP NGÔN NGỮ TỐI THƯỢNG (ZERO-LEAKAGE LANGUAGE POLICY):
 3. BẮT BUỘC 100% toàn bộ danh sách TAGS YOUTUBE (vidIQ style) phải là các từ khóa bản địa (Native Search Queries) bằng ${targetLangObj.name} mà người dùng tại quốc gia đó thực sự tìm kiếm trên YouTube.
 
 Nhiệm vụ của bạn: Từ Tiêu đề video và Kịch bản nội dung được cung cấp, hãy tạo ra:
-1. Một bản MÔ TẢ YOUTUBE (SEO Description) đỉnh cao bằng ${targetLangObj.name} tối ưu hóa điểm đề xuất thuật toán YouTube.
+1. Một bản MÔ TẢ YOUTUBE (SEO Description) đỉnh cao bằng ${targetLangObj.name} theo đúng CẤU TRÚC 5 TẦNG BẮT BUỘC.
 2. Một danh sách TAGS YOUTUBE (vidIQ style) bằng ${targetLangObj.name} có điểm số SEO cao ngất ngưởng, TỔNG ĐỘ DÀI KHI NỐI DẤU PHẨY BẮT BUỘC DƯỚI 500 KÝ TỰ.
 
-QUY TẮC BẮT BUỘC CHO MÔ TẢ (SEO DESCRIPTION) BẰNG ${targetLangObj.name}:
-- Phần 1 (2 dòng đầu tiên, < 150 ký tự): Câu hook/mở đầu cực kỳ cuốn hút bằng ${targetLangObj.name}, đánh trúng khoảng trống tò mò (Curiosity Gap) và chứa tự nhiên từ khóa chính.
-- Phần 2 (Tóm tắt & Nội dung cốt lõi): 2-3 đoạn văn cô đọng, sắc bén bằng ${targetLangObj.name}, chia sẻ giá trị người xem sẽ nhận được.
+QUY TẮC CẤU TRÚC 5 TẦNG BẮT BUỘC CHO MÔ TẢ (SEO DESCRIPTION) BẰNG ${targetLangObj.name}:
+Bản mô tả trong trường "description" BẮT BUỘC PHẢI PHÂN THÀNH ĐÚNG 5 PHẦN RÕ RÀNG (ngắt cách nhau bằng 2 dấu xuống dòng \\n\\n, TUYỆT ĐỐI KHÔNG gộp thành 1 khối văn bản dính liền):
+
+1. 🎯 TẦNG 1 (2 DÒNG HOOK CTR ĐẦU TIÊN - VÙNG VÀNG TRƯỚC NÚT "XEM THÊM" < 150 KÝ TỰ):
+   - Câu giật tít, tò mò tột độ (Curiosity Gap) đánh trúng tâm lý, kích thích người xem nhấp chuột xem tiếp.
+   - Chèn tự nhiên từ khóa chính của video để tối ưu CTR và SEO tìm kiếm YouTube.
+
+2. 📖 TẦNG 2 (TÓM TẮT GIÁ TRỊ CỐT LÕI):
+   - 2 đến 3 đoạn văn ngắn, cô đọng, sắc bén bằng ${targetLangObj.name}, chia sẻ sâu sắc giá trị hoặc thông điệp cốt lõi mà người xem sẽ nhận được.
+
 ${descPart3Prompt}
-- Phần 4 (Kêu gọi hành động & Liên kết): Kêu gọi người xem Like, Đăng ký kênh và bấm chuông thông báo (🔔) bằng ${targetLangObj.name}.
-- Phần 5 (DƯỚI CÙNG BẮT BUỘC): Đặt từ 3 đến 5 Hashtags SEO thịnh hành nhất bằng ${targetLangObj.name} bắt đầu bằng dấu #.
+
+4. 🔔 TẦNG 4 (KÊU GỌI HÀNH ĐỘNG - CTA KÍCH THÍCH TƯƠNG TÁC & GIỮ CHÂN):
+   - Lời kêu gọi hành động chân thành, giàu cảm xúc bằng ${targetLangObj.name}: Nhấn Like 👍 ủng hộ video, Đăng ký kênh (Subscribe) 🔔 và bật chuông thông báo để đón xem nội dung mới nhất, để lại bình luận chia sẻ câu chuyện hoặc góc nhìn của bạn bên dưới.
+
+5. 🏷️ TẦNG 5 (DƯỚI CÙNG BẮT BUỘC - 3 ĐẾN 5 HASHTAGS BẢN ĐỊA THỊNH HÀNH):
+   - BẮT BUỘC đặt từ 3 đến 5 Hashtags viết liền bắt đầu bằng dấu # (ví dụ: #PhatDay #TamAnLac #BuongBoLoAu #NguNgon) liên quan trực tiếp đến chủ đề video. TUYỆT ĐỐI KHÔNG ĐƯỢC BỎ QUÊN HASHTAGS.
 
 QUY TẮC BẮT BUỘC CHO TAGS YOUTUBE (VIDIQ STYLE) BẰNG ${targetLangObj.name}:
 - Số lượng: Khoảng 18 đến 26 tags chất lượng cao hoàn toàn bằng ${targetLangObj.name}.
@@ -4330,7 +4361,7 @@ QUY TẮC BẮT BUỘC CHO TAGS YOUTUBE (VIDIQ STYLE) BẰNG ${targetLangObj.nam
 ĐỊNH DẠNG ĐẦU RA BẮT BUỘC (JSON SCHEMA):
 BẮT BUỘC chỉ trả về duy nhất 1 đối tượng JSON thuần túy (không chào hỏi hay viết thêm chữ nào ngoài JSON):
 {
-  "description": "${isSrtMode ? 'Nội dung toàn bộ mô tả video gồm hook, tóm tắt, chapters theo mốc thời gian thực từ SRT, CTA và hashtags...' : 'Nội dung toàn bộ mô tả video gồm hook, tóm tắt, các điểm nhấn luận điểm (TUYỆT ĐỐI KHÔNG CÓ TIMESTAMPS HOẶC 00:00), CTA và hashtags...'}",
+  "description": "${isSrtMode ? '2 dòng hook CTR...\\n\\nTóm tắt giá trị cốt lõi...\\n\\n00:00 - Phân cảnh 1\\n02:15 - Phân cảnh 2...\\n\\nLời kêu gọi Like & Đăng ký kênh...\\n\\n#Hashtag1 #Hashtag2 #Hashtag3' : '2 dòng hook CTR...\\n\\nTóm tắt giá trị cốt lõi...\\n\\n• Luận điểm then chốt 1\\n• Luận điểm then chốt 2...\\n\\nLời kêu gọi Like & Đăng ký kênh...\\n\\n#Hashtag1 #Hashtag2 #Hashtag3'}",
   "tags": [
     { "text": "tag 1 in ${targetLangObj.name}", "score": 92 },
     { "text": "tag 2 in ${targetLangObj.name}", "score": 88 },
@@ -4347,7 +4378,7 @@ NỘI DUNG KỊCH BẢN CUNG CẤP:
 ${content || '(Người dùng chỉ cung cấp tiêu đề, hãy phân tích tiêu đề và suy luận toàn diện để tạo mô tả và tags xuất sắc)'}
 """
 
-Hãy tạo Mô tả SEO tối ưu và danh sách Tags phong cách vidIQ theo đúng JSON Schema đã quy định, TOÀN BỘ 100% BẰNG ${targetLangObj.name}.${!isSrtMode ? ' NHẮC LẠI: TUYỆT ĐỐI KHÔNG CHÈN BẤT KỲ MỐC THỜI GIAN 00:00 HOẶC mm:ss NÀO.' : ''} Lưu ý tổng độ dài chuỗi tags nối dấu phẩy phải nhỏ hơn hoặc bằng 500 ký tự.`;
+Hãy tạo Mô tả SEO tối ưu theo ĐÚNG CẤU TRÚC 5 TẦNG (2 dòng hook CTR đầu tiên, tóm tắt giá trị cốt lõi, ${isSrtMode ? 'chapters mốc thời gian thực' : 'luận điểm then chốt •'}, CTA đăng ký kênh và BẮT BUỘC 3-5 hashtags ở cuối cùng) và danh sách Tags phong cách vidIQ theo đúng JSON Schema đã quy định, TOÀN BỘ 100% BẰNG ${targetLangObj.name}.${!isSrtMode ? ' NHẮC LẠI: TUYỆT ĐỐI KHÔNG CHÈN BẤT KỲ MỐC THỜI GIAN 00:00 HOẶC mm:ss NÀO.' : ''} Lưu ý tổng độ dài chuỗi tags nối dấu phẩy phải nhỏ hơn hoặc bằng 500 ký tự.`;
 
   setDescGeneratingUIState(true);
   state.descriptionState.abortController = new AbortController();
@@ -4546,8 +4577,23 @@ function parseDescriptionAndTagsFromResponse(rawText) {
         }
       }
 
+      // Auto-Hashtag Guarantee: Ensure description always ends with hashtags
+      let finalDesc = desc.trim();
+      if (finalDesc && validTags.length > 0) {
+        const hasHashtags = /(?:#[a-zA-Z0-9_\u00C0-\u1EF9]+[\s\n]*){2,}/.test(finalDesc);
+        if (!hasHashtags) {
+          const autoHashtags = validTags.slice(0, 4)
+            .map(t => '#' + t.text.replace(/[\s\-_'"“”«».,!?]+/g, ''))
+            .filter(h => h.length > 2)
+            .join(' ');
+          if (autoHashtags) {
+            finalDesc = `${finalDesc}\n\n${autoHashtags}`;
+          }
+        }
+      }
+
       return {
-        description: desc.trim(),
+        description: finalDesc,
         tags: validTags
       };
     }
@@ -4576,6 +4622,19 @@ function parseDescriptionAndTagsFromResponse(rawText) {
         accumulatedLength += addedLen;
       }
     });
+  }
+
+  if (descFallback && tagsFallback.length > 0) {
+    const hasHashtags = /(?:#[a-zA-Z0-9_\u00C0-\u1EF9]+[\s\n]*){2,}/.test(descFallback);
+    if (!hasHashtags) {
+      const autoHashtags = tagsFallback.slice(0, 4)
+        .map(t => '#' + t.text.replace(/[\s\-_'"“”«».,!?]+/g, ''))
+        .filter(h => h.length > 2)
+        .join(' ');
+      if (autoHashtags) {
+        descFallback = `${descFallback.trim()}\n\n${autoHashtags}`;
+      }
+    }
   }
 
   return {
