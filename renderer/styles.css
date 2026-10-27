@@ -6037,11 +6037,14 @@ input, textarea, select, button {
 
 /* Gem Chat Scroll Area */
 .gem-chat-scroll {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  padding: 24px 32px;
+  padding: 24px 32px 32px;
   display: flex;
   flex-direction: column;
+  scroll-behavior: smooth;
+  position: relative;
 }
 
 .gem-chat-scroll::-webkit-scrollbar {
@@ -6144,37 +6147,181 @@ input, textarea, select, button {
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
 }
 
-/* Chat Messages List */
+/* ===================================================================
+   CHAT MESSAGES LIST & UNLOCKED TEXT SELECTION
+   =================================================================== */
 .gem-messages-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 22px;
   max-width: 860px;
   width: 100%;
   margin: 0 auto;
 }
 
+/* Text Selection Enabled for Chat Messages */
+.gem-messages-list,
+.gem-msg-bubble,
+.gem-msg-text,
+.gem-msg-markdown,
+.gem-msg-markdown * {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  cursor: text;
+}
+
+.gem-messages-list ::selection,
+.gem-msg-bubble ::selection {
+  background: #C7D2FE !important;
+  color: #1E1B4B !important;
+}
+
 .gem-msg-row {
   display: flex;
   width: 100%;
-  animation: fadeInMsg 0.25s ease-out;
+  animation: fadeInMsg 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  scroll-margin-top: 24px;
 }
 
 @keyframes fadeInMsg {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* User Message Row */
 .gem-msg-row.user {
   justify-content: flex-end;
+  gap: 12px;
+  position: relative;
 }
 
+.gem-msg-user-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  max-width: 82%;
+}
+
+.gem-msg-bubble.user {
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  color: #0F172A;
+  border-radius: 20px 20px 4px 20px;
+  padding: 13px 18px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+  font-size: 13.5px;
+  line-height: 1.65;
+  word-break: break-word;
+  white-space: pre-wrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: fit-content;
+}
+
+.gem-msg-bubble.user:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
+}
+
+/* Collapsible state for long user prompt */
+.gem-msg-text.collapsed {
+  max-height: 200px;
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(180deg, #000000 60%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000000 60%, transparent 100%);
+}
+
+.btn-toggle-expand-prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #E2E8F0;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-toggle-expand-prompt:hover {
+  background: #CBD5E1;
+  color: #0F172A;
+}
+
+/* User Message Hover Toolbar (Copy prompt & Edit prompt) */
+.gem-user-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  user-select: none;
+}
+
+.gem-msg-row.user:hover .gem-user-actions-bar {
+  opacity: 1;
+}
+
+.btn-user-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.btn-user-action svg {
+  width: 12px;
+  height: 12px;
+}
+
+.btn-user-action:hover {
+  border-color: #6366F1;
+  color: #4F46E5;
+  background: #EEF2FF;
+}
+
+.gem-msg-avatar.user {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #EEF2FF;
+  border: 1px solid #C7D2FE;
+  color: #4F46E5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(99, 102, 241, 0.12);
+}
+
+.gem-msg-avatar.user svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Assistant Message Row */
 .gem-msg-row.assistant {
   justify-content: flex-start;
   gap: 12px;
+  position: relative;
 }
 
-.gem-msg-avatar {
+.gem-msg-avatar.assistant {
   width: 34px;
   height: 34px;
   border-radius: 10px;
@@ -6186,67 +6333,104 @@ input, textarea, select, button {
   font-size: 17px;
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(99, 102, 241, 0.12);
-}
-
-.gem-msg-content-wrap {
-  flex: 1;
-  max-width: 86%;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.gem-msg-bubble.user {
-  background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
-  color: #FFFFFF;
-  border-radius: 18px 18px 4px 18px;
-  padding: 12px 18px;
-  max-width: 80%;
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.22);
-  font-size: 13.5px;
-  line-height: 1.6;
-  word-break: break-word;
-  white-space: pre-wrap;
-  max-height: 380px;
-  overflow-y: auto;
+  margin-top: 2px;
 }
 
 .gem-msg-bubble.assistant {
   background: #FFFFFF;
   border: 1.5px solid #E2E8F0;
-  border-radius: 4px 18px 18px 18px;
-  padding: 16px 20px;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  border-radius: 4px 20px 20px 20px;
+  padding: 16px 22px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
   font-size: 13.5px;
-  line-height: 1.65;
+  line-height: 1.68;
   color: #0F172A;
   word-break: break-word;
+  max-width: 88%;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gem-msg-bubble.assistant:hover {
+  border-color: #CBD5E1;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+/* Clean Header inside Assistant Bubble */
+.gem-msg-author-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F1F5F9;
+  user-select: none;
+}
+
+.gem-msg-author-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1E293B;
+  letter-spacing: -0.01em;
+}
+
+.gem-msg-author-cmd {
+  font-size: 10.5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #6366F1;
+  background: #EEF2FF;
+  padding: 1.5px 6px;
+  border-radius: 4px;
 }
 
 /* Markdown styling inside assistant bubble */
-.gem-msg-bubble.assistant p {
+.gem-msg-markdown p {
   margin-bottom: 10px;
 }
 
-.gem-msg-bubble.assistant p:last-child {
+.gem-msg-markdown p:last-child {
   margin-bottom: 0;
 }
 
-.gem-msg-bubble.assistant ul, 
-.gem-msg-bubble.assistant ol {
-  margin: 8px 0 12px 22px;
+.gem-msg-markdown h2, .gem-md-h2 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 16px 0 8px;
+  letter-spacing: -0.01em;
 }
 
-.gem-msg-bubble.assistant li {
+.gem-msg-markdown h3, .gem-md-h3 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 14px 0 6px;
+}
+
+.gem-msg-markdown h4, .gem-md-h4 {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #334155;
+  margin: 12px 0 4px;
+}
+
+.gem-msg-markdown ul, 
+.gem-msg-markdown ol {
+  margin: 8px 0 12px 20px;
+  padding-left: 4px;
+}
+
+.gem-msg-markdown li {
   margin-bottom: 5px;
+  line-height: 1.6;
 }
 
-.gem-msg-bubble.assistant strong {
+.gem-msg-markdown strong {
   font-weight: 700;
   color: #0F172A;
 }
 
-.gem-msg-bubble.assistant code {
+.gem-inline-code {
   background: #F1F5F9;
   border: 1px solid #E2E8F0;
   border-radius: 4px;
@@ -6256,55 +6440,116 @@ input, textarea, select, button {
   color: #4338CA;
 }
 
-.gem-msg-bubble.assistant pre {
+.gem-code-block {
   background: #0F172A;
-  color: #F8FAFC;
   border-radius: 10px;
-  padding: 12px 16px;
-  margin: 10px 0;
-  overflow-x: auto;
-  position: relative;
+  margin: 12px 0;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
 }
 
-.gem-msg-bubble.assistant pre code {
-  background: transparent;
-  border: none;
-  color: #F8FAFC;
-  padding: 0;
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-
-.gem-msg-actions {
+.gem-code-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-left: 4px;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #1E293B;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  user-select: none;
 }
 
-.btn-msg-action {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+.gem-code-lang {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-copy-code {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  color: #F8FAFC;
+  font-size: 11px;
+  font-weight: 600;
   padding: 3px 8px;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  font-size: 11.5px;
-  color: #64748B;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.btn-msg-action:hover {
-  background: #F1F5F9;
-  color: #334155;
-  border-color: #E2E8F0;
+.btn-copy-code:hover {
+  background: #6366F1;
+  border-color: #6366F1;
 }
 
-.btn-msg-action svg {
-  width: 12px;
-  height: 12px;
+.gem-code-pre {
+  margin: 0;
+  padding: 12px 16px;
+  overflow-x: auto;
+}
+
+.gem-code-pre code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #F8FAFC;
+  background: transparent;
+  border: none;
+}
+
+/* Footer Toolbar (Chân tin nhắn phản hồi AI - ChatGPT style) */
+.gem-msg-footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #F1F5F9;
+  font-size: 11.5px;
+  color: #94A3B8;
+  user-select: none;
+}
+
+.gem-msg-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #94A3B8;
+}
+
+.btn-copy-gem-msg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-copy-gem-msg svg {
+  width: 13px;
+  height: 13px;
+}
+
+.btn-copy-gem-msg:hover {
+  background: #EEF2FF;
+  border-color: #6366F1;
+  color: #4F46E5;
+}
+
+.btn-copy-gem-msg.copied {
+  background: #ECFDF5;
+  border-color: #10B981;
+  color: #059669;
 }
 
 /* Typing Indicator Animation */
@@ -6332,26 +6577,188 @@ input, textarea, select, button {
   40% { transform: scale(1); opacity: 1; }
 }
 
+/* ===================================================================
+   FLOATING SCROLL-TO-BOTTOM BUTTON & TURN NAVIGATOR RAIL (CHATGPT STYLE)
+   =================================================================== */
+
+/* Floating Scroll to Bottom Button */
+.gem-scroll-bottom-btn {
+  position: absolute;
+  bottom: 125px;
+  right: 28px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  color: #475569;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gem-scroll-bottom-btn svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.gem-scroll-bottom-btn:hover {
+  transform: translateY(-2px);
+  border-color: #6366F1;
+  color: #4F46E5;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.22);
+}
+
+.gem-scroll-bottom-btn:hover svg {
+  transform: translateY(2px);
+}
+
+/* Right-Side Turn Rail */
+.gem-turn-rail {
+  position: absolute;
+  right: 14px;
+  top: 48%;
+  transform: translateY(-50%);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 5px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+  user-select: none;
+}
+
+.gem-turn-rail-track {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+
+.gem-turn-rail-track::-webkit-scrollbar {
+  display: none;
+}
+
+.gem-turn-rail-item {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.gem-turn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #CBD5E1;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.gem-turn-rail-item:hover .gem-turn-dot {
+  width: 12px;
+  height: 12px;
+  background: #6366F1;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+}
+
+.gem-turn-rail-item.active .gem-turn-dot {
+  width: 10px;
+  height: 10px;
+  background: #4F46E5;
+  box-shadow: 0 0 6px rgba(79, 70, 229, 0.45);
+}
+
+/* Tooltip Preview on Hover */
+.gem-turn-tooltip {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(6px);
+  background: #0F172A;
+  color: #FFFFFF;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+  z-index: 50;
+}
+
+.gem-turn-tip-header {
+  font-size: 10px;
+  font-weight: 800;
+  color: #818CF8;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.gem-turn-tip-body {
+  color: #E2E8F0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gem-turn-rail-item:hover .gem-turn-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* Flash pulse animation when jumping to a turn */
+.highlight-turn {
+  animation: turnPulse 1.4s ease-out;
+}
+
+@keyframes turnPulse {
+  0% { outline: 2.5px solid rgba(99, 102, 241, 0.85); box-shadow: 0 0 20px rgba(99, 102, 241, 0.35); }
+  100% { outline: 2.5px solid transparent; box-shadow: none; }
+}
+
 /* Chat Footer & Input Box */
 .gem-chat-footer {
-  padding: 10px 24px 18px;
+  padding: 6px 24px 16px;
   background: linear-gradient(180deg, rgba(248, 250, 252, 0) 0%, #F8FAFC 25%);
   position: relative;
   max-width: 1000px;
   width: 100%;
   margin: 0 auto;
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 .gem-input-box {
   background: #FFFFFF;
   border: 1.5px solid #CBD5E1;
   border-radius: 16px;
-  padding: 12px 16px 12px 16px;
+  padding: 6px 16px 12px;
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 6px;
+  max-height: 520px;
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
 }
 
 .gem-input-box:focus-within {
@@ -6359,14 +6766,55 @@ input, textarea, select, button {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.14), 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
+/* Vertical Drag Resize Handle */
+.gem-input-resize-handle {
+  width: 100%;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: ns-resize;
+  user-select: none;
+  margin: -3px 0 2px;
+  padding: 3px 0;
+}
+
+.gem-resize-bar {
+  width: 36px;
+  height: 4px;
+  border-radius: 9999px;
+  background: #CBD5E1;
+  transition: all 0.2s ease;
+}
+
+.gem-input-resize-handle:hover .gem-resize-bar,
+.gem-input-box.is-resizing .gem-resize-bar {
+  background: #6366F1;
+  width: 56px;
+  height: 5px;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.45);
+}
+
+/* Focus-Expanded Mode (Expands high up near the top greeting) */
+.gem-input-box.focus-expanded {
+  max-height: 75vh;
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.16), 0 16px 36px rgba(15, 23, 42, 0.14);
+}
+
+.gem-input-box.focus-expanded .gem-chat-textarea {
+  max-height: min(540px, 60vh);
+}
+
 /* Context Badge Bar */
 .gem-input-context-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
   border-bottom: 1px solid #EEF2FF;
   animation: fadeInContext 0.2s ease-out;
+  flex-shrink: 0;
 }
 
 @keyframes fadeInContext {
@@ -6416,11 +6864,11 @@ input, textarea, select, button {
   background: #FEF2F2;
 }
 
-/* Chat Textarea (Full Width, Auto-expanding, No Visible Scrollbar) */
+/* Chat Textarea (Auto-expanding up to 400px, Slim Scrollbar) */
 .gem-chat-textarea {
   width: 100%;
-  min-height: 40px;
-  max-height: 480px;
+  min-height: 38px;
+  max-height: 400px;
   overflow-y: auto;
   border: none;
   outline: none;
@@ -6430,16 +6878,22 @@ input, textarea, select, button {
   line-height: 1.6;
   background: transparent;
   color: #0F172A;
-  padding: 4px 0;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge */
+  padding: 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 transparent;
 }
 
-/* Hide scrollbar completely (BỎ HOÀN TOÀN THANH SLIDE) */
 .gem-chat-textarea::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+  width: 5px;
+}
+
+.gem-chat-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.gem-chat-textarea::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 9999px;
 }
 
 .gem-chat-textarea::placeholder {
@@ -6452,8 +6906,9 @@ input, textarea, select, button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid #F1F5F9;
+  flex-shrink: 0;
 }
 
 .gem-input-hint {
@@ -6465,6 +6920,47 @@ input, textarea, select, button {
 .gem-input-hint strong {
   color: #64748B;
   font-weight: 600;
+}
+
+.gem-input-bottom-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-expand-gem-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.btn-expand-gem-input svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  transition: transform 0.2s ease;
+}
+
+.btn-expand-gem-input:hover {
+  background: #EEF2FF;
+  border-color: #6366F1;
+  color: #4F46E5;
+}
+
+.gem-input-box.focus-expanded .btn-expand-gem-input {
+  background: #EEF2FF;
+  border-color: #6366F1;
+  color: #4F46E5;
 }
 
 .btn-gem-send {

@@ -1164,6 +1164,21 @@
               </div>
             </div>
 
+            <!-- Floating Scroll-To-Bottom Button (ChatGPT style) -->
+            <button type="button" class="gem-scroll-bottom-btn hidden" id="gemBtnScrollBottom" title="Cuộn xuống tin nhắn mới nhất">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <polyline points="19 12 12 19 5 12"></polyline>
+              </svg>
+            </button>
+
+            <!-- Right-Side Conversation Turn Navigator Rail (ChatGPT style) -->
+            <aside class="gem-turn-rail hidden" id="gemTurnRail" aria-label="Điều hướng các lượt chat">
+              <div class="gem-turn-rail-track" id="gemTurnRailTrack">
+                <!-- Rendered dynamically as dots with preview tooltips -->
+              </div>
+            </aside>
+
             <!-- Gem Bottom Input Area -->
             <div class="gem-chat-footer">
               <!-- Slash command autocomplete popover -->
@@ -1177,7 +1192,12 @@
               </div>
 
               <!-- Input Box -->
-              <div class="gem-input-box">
+              <div class="gem-input-box" id="gemInputBox">
+                <!-- Vertical Drag Resize Handle -->
+                <div class="gem-input-resize-handle" id="gemInputResizeHandle" title="Kéo lên/xuống để thay đổi chiều cao khung soạn thảo">
+                  <span class="gem-resize-bar"></span>
+                </div>
+
                 <!-- Context Badge Bar when Gem instruction is active -->
                 <div class="gem-input-context-bar hidden" id="gemInputContextBar">
                   <div class="gem-context-pill">
@@ -1207,12 +1227,23 @@
                   <div class="gem-input-hint">
                     <span>Nhấn <strong>Enter</strong> để gửi • <strong>Shift + Enter</strong> xuống dòng</span>
                   </div>
-                  <button class="btn-gem-send" id="btnGemSend" type="button" title="Gửi tin nhắn (Enter)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                  </button>
+                  <div class="gem-input-bottom-actions">
+                    <button type="button" class="btn-expand-gem-input" id="btnExpandGemInput" title="Phóng to / Thu nhỏ khung soạn thảo">
+                      <svg class="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="15 3 21 3 21 9"></polyline>
+                        <polyline points="9 21 3 21 3 15"></polyline>
+                        <line x1="21" y1="3" x2="14" y2="10"></line>
+                        <line x1="3" y1="21" x2="10" y2="14"></line>
+                      </svg>
+                      <span id="btnExpandGemInputText">Mở rộng</span>
+                    </button>
+                    <button class="btn-gem-send" id="btnGemSend" type="button" title="Gửi tin nhắn (Enter)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1710,7 +1741,7 @@
                     <div class="app-version-info">
                       <div class="version-badge-line">
                         <span class="version-label">Phiên bản hiện tại:</span>
-                        <span class="version-tag" id="currentAppVersionDisplay">v1.6.0</span>
+                        <span class="version-tag" id="currentAppVersionDisplay">v1.6.1</span>
                       </div>
                       <span class="version-status-text" id="appVersionStatusText">Bấm kiểm tra để nhận bản cập nhật mới nhất từ GitHub.</span>
                     </div>

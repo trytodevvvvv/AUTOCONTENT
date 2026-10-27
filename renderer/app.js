@@ -239,8 +239,15 @@ const DOM = {
   gemMessagesList: document.getElementById('gemMessagesList'),
   gemSlashPopover: document.getElementById('gemSlashPopover'),
   gemSlashItems: document.getElementById('gemSlashItems'),
+  gemInputBox: document.getElementById('gemInputBox'),
+  gemInputResizeHandle: document.getElementById('gemInputResizeHandle'),
+  btnExpandGemInput: document.getElementById('btnExpandGemInput'),
+  btnExpandGemInputText: document.getElementById('btnExpandGemInputText'),
   inputGemChat: document.getElementById('inputGemChat'),
   btnGemSend: document.getElementById('btnGemSend'),
+  gemBtnScrollBottom: document.getElementById('gemBtnScrollBottom'),
+  gemTurnRail: document.getElementById('gemTurnRail'),
+  gemTurnRailTrack: document.getElementById('gemTurnRailTrack'),
   gemInputContextBar: document.getElementById('gemInputContextBar'),
   gemContextIcon: document.getElementById('gemContextIcon'),
   gemContextName: document.getElementById('gemContextName'),
@@ -997,6 +1004,19 @@ function bindEvents() {
     if (!state.isGenerating && checkReadiness()) startGeneration();
   });
 
+  // Output Container Scroll Listener: Detect user scroll up to pause auto-scroll
+  if (DOM.outputContainer) {
+    DOM.outputContainer.addEventListener('scroll', () => {
+      const { scrollTop, scrollHeight, clientHeight } = DOM.outputContainer;
+      const distFromBottom = scrollHeight - scrollTop - clientHeight;
+      if (distFromBottom > 45) {
+        scriptUserScrolledUp = true;
+      } else {
+        scriptUserScrolledUp = false;
+      }
+    });
+  }
+
   // Settings Modal Controls
   DOM.btnCloseModal.addEventListener('click', closeSettingsModal);
   DOM.btnCancelSettings.addEventListener('click', closeSettingsModal);
@@ -1598,13 +1618,17 @@ ${formatDescriptions[format] || formatDescriptions.youtube_standard}`;
 // HIGH-PERFORMANCE STREAM BUFFERING & RAF THROTTLING (60/120 FPS)
 // ===================================================================
 let streamRafId = null;
+let scriptUserScrolledUp = false;
 
 function scheduleStreamRender() {
   if (streamRafId) return;
   streamRafId = requestAnimationFrame(() => {
     streamRafId = null;
     DOM.scriptContent.innerHTML = formatCleanScript(state.rawOutputScript);
-    DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
+    // Smart Auto-Scroll: Only auto-scroll down if user has NOT scrolled up to read
+    if (!scriptUserScrolledUp && DOM.outputContainer) {
+      DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
+    }
     updateOutputStats();
   });
 }
@@ -1615,7 +1639,9 @@ function flushStreamRender() {
     streamRafId = null;
   }
   DOM.scriptContent.innerHTML = formatCleanScript(state.rawOutputScript);
-  DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
+  if (!scriptUserScrolledUp && DOM.outputContainer) {
+    DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
+  }
   updateOutputStats();
 }
 
@@ -1683,6 +1709,7 @@ function setGeneratingUIState(generating) {
   ];
 
   if (generating) {
+    scriptUserScrolledUp = false;
     // Hide Quick API Menu if open
     if (DOM.quickApiMenu) DOM.quickApiMenu.classList.add('hidden');
     if (DOM.pillChevron) DOM.pillChevron.classList.remove('rotate');
@@ -5019,6 +5046,8 @@ function renderGemChatUI() {
       DOM.gemMessagesList.classList.add('hidden');
       DOM.gemMessagesList.innerHTML = '';
     }
+    if (DOM.gemTurnRail) DOM.gemTurnRail.classList.add('hidden');
+    if (DOM.gemBtnScrollBottom) DOM.gemBtnScrollBottom.classList.add('hidden');
     renderGemStarterChips();
   } else {
     if (DOM.gemChatBlank) DOM.gemChatBlank.classList.add('hidden');
@@ -5037,18 +5066,51 @@ function renderChatMessages() {
 
   DOM.gemMessagesList.innerHTML = state.gemState.messages.map(msg => {
     if (msg.role === 'user') {
+      const isLongPrompt = (msg.content && (msg.content.length > 360 || msg.content.split('\n').length > 7));
       return `
         <div class="gem-msg-row user" id="${msg.id}">
-          <div class="gem-msg-bubble user">
-            <div class="gem-msg-text">${escapeHtml(msg.content).replace(/\n/g, '<br>')}</div>
+          <div class="gem-msg-user-wrap">
+            <div class="gem-msg-bubble user">
+              <div class="gem-msg-text ${isLongPrompt ? 'collapsed' : ''}" id="text_${msg.id}">
+                ${escapeHtml(msg.content).replace(/\n/g, '<br>')}
+              </div>
+              ${isLongPrompt ? `
+                <button type="button" class="btn-toggle-expand-prompt" data-target="text_${msg.id}">
+                  <span>▼ Xem toàn bộ prompt</span>
+                </button>
+              ` : ''}
+            </div>
+            <div class="gem-user-actions-bar">
+              <button type="button" class="btn-user-action btn-copy-user-msg" data-msg-id="${msg.id}" title="Sao chép prompt">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span>Sao chép</span>
+              </button>
+              <button type="button" class="btn-user-action btn-edit-user-msg" data-msg-id="${msg.id}" title="Đưa prompt vào ô nhập để sửa">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <span>Sửa lại</span>
+              </button>
+            </div>
           </div>
-          <div class="gem-msg-avatar user" title="Bạn">👤</div>
+          <div class="gem-msg-avatar user" title="Bạn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </div>
         </div>
       `;
     } else {
       const msgGem = state.gemState.gems.find(g => g.id === msg.gemId) || currentGem;
       const isPending = !msg.content && state.gemState.isGenerating;
       const formattedContent = msg.content ? formatChatMessageText(msg.content) : '';
+      const charCount = msg.content ? msg.content.length : 0;
+      const wordCount = msg.content ? (msg.content.trim().match(/\S+/g) || []).length : 0;
 
       return `
         <div class="gem-msg-row assistant" id="${msg.id}">
@@ -5057,15 +5119,8 @@ function renderChatMessages() {
           </div>
           <div class="gem-msg-bubble assistant">
             <div class="gem-msg-author-bar">
-              <span class="gem-msg-author-name">${escapeHtml(msgGem ? msgGem.name : 'Gem Assistant')}</span>
-              <span class="gem-msg-author-cmd">/${escapeHtml(msgGem ? msgGem.slug : 'gem')}</span>
-              <button type="button" class="btn-copy-gem-msg" data-msg-id="${msg.id}" title="Sao chép câu trả lời">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-                <span>Sao chép</span>
-              </button>
+              <span class="gem-msg-author-name">${escapeHtml(msgGem ? msgGem.name : 'Trợ lý AI')}</span>
+              <span class="gem-msg-author-cmd">/${escapeHtml(msgGem ? msgGem.slug : 'ai')}</span>
             </div>
             <div class="gem-msg-markdown">
               ${isPending ? `
@@ -5074,19 +5129,138 @@ function renderChatMessages() {
                 </div>
               ` : formattedContent}
             </div>
+            <div class="gem-msg-footer-bar ${isPending ? 'hidden' : ''}">
+              <div class="gem-msg-meta-info">
+                <span>${charCount} ký tự • ${wordCount} từ</span>
+              </div>
+              <div class="gem-msg-actions">
+                <button type="button" class="btn-copy-gem-msg" data-msg-id="${msg.id}" title="Sao chép toàn bộ phản hồi">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                  </svg>
+                  <span>Sao chép</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       `;
     }
   }).join('');
 
+  renderTurnRail();
   scrollGemChatToBottom();
 }
 
-// Scroll chat container smoothly or instantly to bottom
-function scrollGemChatToBottom() {
+// Render Conversation Turn Rail (ChatGPT style timeline)
+function renderTurnRail() {
+  if (!DOM.gemTurnRail || !DOM.gemTurnRailTrack) return;
+
+  const userMessages = (state.gemState.messages || []).filter(m => m.role === 'user');
+
+  if (userMessages.length < 2) {
+    DOM.gemTurnRail.classList.add('hidden');
+    DOM.gemTurnRailTrack.innerHTML = '';
+    return;
+  }
+
+  DOM.gemTurnRail.classList.remove('hidden');
+  DOM.gemTurnRailTrack.innerHTML = userMessages.map((m, idx) => {
+    const turnNum = idx + 1;
+    const cleanPrompt = (m.content || '').replace(/\s+/g, ' ').trim();
+    const preview = cleanPrompt.slice(0, 48) + (cleanPrompt.length > 48 ? '...' : '');
+
+    return `
+      <div class="gem-turn-rail-item ${idx === userMessages.length - 1 ? 'active' : ''}" data-turn-id="${m.id}" title="Lượt ${turnNum}">
+        <div class="gem-turn-dot"></div>
+        <div class="gem-turn-tooltip">
+          <div class="gem-turn-tip-header">LƯỢT ${turnNum}</div>
+          <div class="gem-turn-tip-body">${escapeHtml(preview)}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Jump to turn when clicking rail dot
+function handleTurnRailClick(turnId) {
+  const targetEl = document.getElementById(turnId);
+  if (targetEl && DOM.gemChatScroll) {
+    targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    targetEl.classList.remove('highlight-turn');
+    void targetEl.offsetWidth; // Trigger reflow to restart CSS animation
+    targetEl.classList.add('highlight-turn');
+  }
+}
+
+let chatUserScrolledUp = false;
+
+// Scroll spy for Scroll-To-Bottom button & active Turn Rail dot
+function handleGemChatScroll() {
+  if (!DOM.gemChatScroll) return;
+
+  const { scrollTop, scrollHeight, clientHeight } = DOM.gemChatScroll;
+  const distFromBottom = scrollHeight - scrollTop - clientHeight;
+
+  // Smart Auto-Scroll Freedom: Detect if user intentionally scrolled up (> 45px away from bottom)
+  if (distFromBottom > 45) {
+    chatUserScrolledUp = true;
+  } else {
+    chatUserScrolledUp = false;
+  }
+
+  // Show/Hide Floating Scroll-To-Bottom button
+  if (DOM.gemBtnScrollBottom) {
+    if (distFromBottom > 160) {
+      DOM.gemBtnScrollBottom.classList.remove('hidden');
+    } else {
+      DOM.gemBtnScrollBottom.classList.add('hidden');
+    }
+  }
+
+  // Active Dot on Turn Rail
+  if (DOM.gemTurnRail && !DOM.gemTurnRail.classList.contains('hidden')) {
+    const userMessages = (state.gemState.messages || []).filter(m => m.role === 'user');
+    let activeId = null;
+
+    for (let i = userMessages.length - 1; i >= 0; i--) {
+      const el = document.getElementById(userMessages[i].id);
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        const containerRect = DOM.gemChatScroll.getBoundingClientRect();
+        if (rect.top <= containerRect.top + 220) {
+          activeId = userMessages[i].id;
+          break;
+        }
+      }
+    }
+
+    const items = DOM.gemTurnRail.querySelectorAll('.gem-turn-rail-item');
+    items.forEach(item => {
+      if (item.getAttribute('data-turn-id') === activeId) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+}
+
+// Scroll chat container smoothly or instantly to bottom (Respects user scroll-up intent)
+function scrollGemChatToBottom(smooth = false, force = false) {
   if (DOM.gemChatScroll) {
-    DOM.gemChatScroll.scrollTop = DOM.gemChatScroll.scrollHeight;
+    // If user scrolled up to read and auto-scroll is not forced, DO NOT yank screen down!
+    if (chatUserScrolledUp && !force) return;
+
+    if (smooth) {
+      DOM.gemChatScroll.scrollTo({
+        top: DOM.gemChatScroll.scrollHeight,
+        behavior: 'smooth'
+      });
+    } else {
+      DOM.gemChatScroll.scrollTop = DOM.gemChatScroll.scrollHeight;
+    }
   }
 }
 
@@ -5279,10 +5453,14 @@ QUY TẮC PHẢN HỒI THỰC THI:
   };
   state.gemState.messages.push(assistantMsgObj);
 
-  // Clear input
+  // Clear input & reset expanded mode
   if (DOM.inputGemChat) {
     DOM.inputGemChat.value = '';
     adjustGemTextareaHeight();
+  }
+  if (DOM.gemInputBox?.classList.contains('focus-expanded')) {
+    DOM.gemInputBox.classList.remove('focus-expanded');
+    if (DOM.btnExpandGemInputText) DOM.btnExpandGemInputText.textContent = 'Mở rộng';
   }
   if (DOM.gemInputContextBar) {
     DOM.gemInputContextBar.classList.add('hidden');
@@ -5292,9 +5470,13 @@ QUY TẮC PHẢN HỒI THỰC THI:
   }
   state.gemState.activeGemId = null;
 
+  // Reset scroll-up flag on new message submission
+  chatUserScrolledUp = false;
+
   // Update UI state to generating
   setGemGeneratingUIState(true);
   renderGemChatUI();
+  scrollGemChatToBottom(false, true);
 
   state.gemState.abortController = new AbortController();
 
@@ -5440,15 +5622,41 @@ function updateAssistantBubbleContent(msgId, content, isFinal = false) {
     mdContainer.innerHTML = formatChatMessageText(content);
   }
 
+  // Update footer bar stats
+  const footerEl = row.querySelector('.gem-msg-footer-bar');
+  if (footerEl) {
+    if (content) {
+      footerEl.classList.remove('hidden');
+      const charCount = content.length;
+      const wordCount = (content.trim().match(/\S+/g) || []).length;
+      const metaEl = footerEl.querySelector('.gem-msg-meta-info');
+      if (metaEl) {
+        metaEl.innerHTML = `<span>${charCount} ký tự • ${wordCount} từ</span>`;
+      }
+    } else {
+      footerEl.classList.add('hidden');
+    }
+  }
+
   scrollGemChatToBottom();
 }
 
-// Adjust chat textarea height dynamically
-function adjustGemTextareaHeight() {
+// Adjust chat textarea height dynamically (Expands up to ~400px or 60vh in Focus mode)
+function adjustGemTextareaHeight(forceHeight = null) {
   if (!DOM.inputGemChat) return;
+
+  if (forceHeight !== null) {
+    DOM.inputGemChat.style.height = `${forceHeight}px`;
+    return;
+  }
+
   DOM.inputGemChat.style.height = 'auto';
-  // Allow expanding up to 480px to accommodate full Gem instructions
-  const newHeight = Math.min(Math.max(DOM.inputGemChat.scrollHeight, 40), 480);
+  const isFocusExpanded = DOM.gemInputBox?.classList.contains('focus-expanded');
+  const maxLimit = isFocusExpanded 
+    ? Math.min(window.innerHeight * 0.60, 540) 
+    : 400;
+
+  const newHeight = Math.min(Math.max(DOM.inputGemChat.scrollHeight, 38), maxLimit);
   DOM.inputGemChat.style.height = `${newHeight}px`;
 }
 
@@ -5827,6 +6035,10 @@ function bindGemEvents() {
         DOM.inputGemChat.focus();
         adjustGemTextareaHeight();
       }
+      if (DOM.gemInputBox?.classList.contains('focus-expanded')) {
+        DOM.gemInputBox.classList.remove('focus-expanded');
+        if (DOM.btnExpandGemInputText) DOM.btnExpandGemInputText.textContent = 'Mở rộng';
+      }
       if (DOM.gemInputContextBar) {
         DOM.gemInputContextBar.classList.add('hidden');
       }
@@ -5867,6 +6079,53 @@ function bindGemEvents() {
     });
   }
 
+  // 3b. Expand / Collapse Focus Mode Button
+  if (DOM.btnExpandGemInput) {
+    DOM.btnExpandGemInput.addEventListener('click', () => {
+      if (!DOM.gemInputBox) return;
+      const isExpanded = DOM.gemInputBox.classList.toggle('focus-expanded');
+      if (DOM.btnExpandGemInputText) {
+        DOM.btnExpandGemInputText.textContent = isExpanded ? 'Thu nhỏ' : 'Mở rộng';
+      }
+      DOM.btnExpandGemInput.title = isExpanded ? 'Thu nhỏ khung soạn thảo' : 'Phóng to / Thu nhỏ khung soạn thảo';
+      adjustGemTextareaHeight();
+      if (DOM.inputGemChat) DOM.inputGemChat.focus();
+    });
+  }
+
+  // 3c. Vertical Drag Resize Handle for chat input
+  if (DOM.gemInputResizeHandle && DOM.inputGemChat) {
+    let isDragging = false;
+    let startY = 0;
+    let startH = 0;
+
+    const onMouseMove = (e) => {
+      if (!isDragging) return;
+      const deltaY = startY - e.clientY; // Dragging UP increases height
+      const maxH = Math.min(window.innerHeight * 0.65, 560);
+      const newH = Math.min(Math.max(startH + deltaY, 38), maxH);
+      adjustGemTextareaHeight(newH);
+    };
+
+    const onMouseUp = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      DOM.gemInputBox?.classList.remove('is-resizing');
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    DOM.gemInputResizeHandle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      startY = e.clientY;
+      startH = DOM.inputGemChat.offsetHeight;
+      DOM.gemInputBox?.classList.add('is-resizing');
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    });
+  }
+
   // 4. Starter chip clicks (Call entire Gem instructions directly)
   if (DOM.gemStarterChips) {
     DOM.gemStarterChips.addEventListener('click', (e) => {
@@ -5892,9 +6151,10 @@ function bindGemEvents() {
     });
   }
 
-  // 6. Copy message button delegation in chat
+  // 6. Chat messages list delegation (Copy, Edit, Expand/Collapse)
   if (DOM.gemMessagesList) {
     DOM.gemMessagesList.addEventListener('click', async (e) => {
+      // a. Copy assistant message button
       const copyBtn = e.target.closest('.btn-copy-gem-msg');
       if (copyBtn) {
         const msgId = copyBtn.getAttribute('data-msg-id');
@@ -5902,15 +6162,97 @@ function bindGemEvents() {
         if (msg && msg.content) {
           try {
             await navigator.clipboard.writeText(msg.content);
+            copyBtn.classList.add('copied');
             const span = copyBtn.querySelector('span');
             const orig = span ? span.textContent : 'Sao chép';
             if (span) span.textContent = '✓ ĐÃ CHÉP';
-            setTimeout(() => { if (span) span.textContent = orig; }, 1500);
+            setTimeout(() => { 
+              copyBtn.classList.remove('copied');
+              if (span) span.textContent = orig; 
+            }, 1600);
             showToast('Đã sao chép phản hồi vào Clipboard!', 'success', 1500);
           } catch (err) {
             showToast('Không thể sao chép!', 'danger');
           }
         }
+        return;
+      }
+
+      // b. Copy user prompt button
+      const copyUserBtn = e.target.closest('.btn-copy-user-msg');
+      if (copyUserBtn) {
+        const msgId = copyUserBtn.getAttribute('data-msg-id');
+        const msg = state.gemState.messages.find(m => m.id === msgId);
+        if (msg && msg.content) {
+          try {
+            await navigator.clipboard.writeText(msg.content);
+            const span = copyUserBtn.querySelector('span');
+            const orig = span ? span.textContent : 'Sao chép';
+            if (span) span.textContent = '✓ Đã chép';
+            setTimeout(() => { if (span) span.textContent = orig; }, 1600);
+            showToast('Đã sao chép prompt vào Clipboard!', 'success', 1500);
+          } catch (err) {
+            showToast('Không thể sao chép!', 'danger');
+          }
+        }
+        return;
+      }
+
+      // c. Edit user prompt button (populate input box)
+      const editUserBtn = e.target.closest('.btn-edit-user-msg');
+      if (editUserBtn) {
+        const msgId = editUserBtn.getAttribute('data-msg-id');
+        const msg = state.gemState.messages.find(m => m.id === msgId);
+        if (msg && msg.content && DOM.inputGemChat) {
+          DOM.inputGemChat.value = msg.content;
+          adjustGemTextareaHeight();
+          DOM.inputGemChat.focus();
+          DOM.inputGemChat.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          showToast('Đã đưa prompt vào ô nhập để bạn chỉnh sửa!', 'info', 1600);
+        }
+        return;
+      }
+
+      // d. Expand/Collapse toggle for long user prompt
+      const toggleExpandBtn = e.target.closest('.btn-toggle-expand-prompt');
+      if (toggleExpandBtn) {
+        const targetId = toggleExpandBtn.getAttribute('data-target');
+        const textEl = document.getElementById(targetId);
+        if (textEl) {
+          const isCollapsed = textEl.classList.contains('collapsed');
+          if (isCollapsed) {
+            textEl.classList.remove('collapsed');
+            toggleExpandBtn.innerHTML = '<span>▲ Thu gọn prompt</span>';
+          } else {
+            textEl.classList.add('collapsed');
+            toggleExpandBtn.innerHTML = '<span>▼ Xem toàn bộ prompt</span>';
+          }
+        }
+        return;
+      }
+    });
+  }
+
+  // 7. Scroll listener on gemChatScroll for Floating Button & Turn Rail
+  if (DOM.gemChatScroll) {
+    DOM.gemChatScroll.addEventListener('scroll', handleGemChatScroll);
+  }
+
+  // 8. Click on Scroll To Bottom button
+  if (DOM.gemBtnScrollBottom) {
+    DOM.gemBtnScrollBottom.addEventListener('click', () => {
+      chatUserScrolledUp = false;
+      scrollGemChatToBottom(true, true);
+    });
+  }
+
+  // 9. Click on Turn Rail Item (Instant Jump to Turn)
+  if (DOM.gemTurnRailTrack) {
+    DOM.gemTurnRailTrack.addEventListener('click', (e) => {
+      const item = e.target.closest('.gem-turn-rail-item');
+      if (item) {
+        const turnId = item.getAttribute('data-turn-id');
+        if (turnId) handleTurnRailClick(turnId);
       }
     });
   }
