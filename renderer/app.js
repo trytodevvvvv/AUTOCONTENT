@@ -596,7 +596,7 @@ function switchMainView(viewName, settingsTab = 'general') {
     state.activeWorkspaceView = 'gem';
     if (DOM.viewGemStudio) DOM.viewGemStudio.classList.remove('hidden');
     if (DOM.btnNavGem) DOM.btnNavGem.classList.add('active');
-    if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'Gem AI Studio - Custom Skills & Trợ lý thông minh';
+    if (DOM.headerSubtitleText) DOM.headerSubtitleText.textContent = 'Chat AI Studio - Trợ lý thông minh & Kỹ năng Gem';
     renderGemChatUI();
     if (DOM.inputGemChat) DOM.inputGemChat.focus();
   } else if (viewName === 'settings') {
@@ -611,11 +611,11 @@ function switchMainView(viewName, settingsTab = 'general') {
     } else if (state.activeWorkspaceView === 'title') {
       backText = 'Quay lại Tiêu đề';
     } else if (state.activeWorkspaceView === 'gem') {
-      backText = 'Quay lại Gem';
+      backText = 'Quay lại Chat AI';
     }
     if (DOM.btnBackToScriptText) DOM.btnBackToScriptText.textContent = backText;
     if (DOM.btnBackToScript) {
-      const workspaceLabel = state.activeWorkspaceView === 'description' ? 'Mô tả' : (state.activeWorkspaceView === 'title' ? 'Tiêu đề' : (state.activeWorkspaceView === 'gem' ? 'Gem' : 'Kịch bản'));
+      const workspaceLabel = state.activeWorkspaceView === 'description' ? 'Mô tả' : (state.activeWorkspaceView === 'title' ? 'Tiêu đề' : (state.activeWorkspaceView === 'gem' ? 'Chat AI' : 'Kịch bản'));
       DOM.btnBackToScript.title = `Quay lại bàn làm việc ${workspaceLabel}`;
     }
 
@@ -4049,13 +4049,13 @@ function setDescMode(mode, fromUserClick = false, isAuto = false) {
     if (DOM.btnModePlain) DOM.btnModePlain.classList.add('active');
     if (DOM.btnModeSrt) DOM.btnModeSrt.classList.remove('active');
     if (DOM.inputDescContent) {
-      DOM.inputDescContent.placeholder = '';
+      DOM.inputDescContent.placeholder = 'Dán toàn bộ nội dung kịch bản video hoặc bài viết tại đây để AI bóc tách giá trị, tối ưu bài Mô tả 5 tầng & Tags vidIQ...';
     }
   } else if (mode === 'srt') {
     if (DOM.btnModeSrt) DOM.btnModeSrt.classList.add('active');
     if (DOM.btnModePlain) DOM.btnModePlain.classList.remove('active');
     if (DOM.inputDescContent) {
-      DOM.inputDescContent.placeholder = '';
+      DOM.inputDescContent.placeholder = 'Dán nội dung file phụ đề SRT (chứa mốc timeline 00:00:00 --> 00:00:00) để AI tự động trích xuất các mốc thời gian Chapters thực tế...';
     }
   }
 
@@ -4970,19 +4970,18 @@ function renderGemStarterChips() {
   `).join('');
 }
 
-// Insert entire Gem system instructions into input box
+// Insert entire Gem system instructions into input box (pure prompt without artificial tags)
 function insertGemInstructionsIntoInput(gem, customQuestion = '') {
   if (!gem || !DOM.inputGemChat) return;
 
   state.gemState.activeGemId = gem.id;
 
-  const template = `[CHỈ DẪN HỆ THỐNG - ${gem.name.toUpperCase()}]:
-${gem.instructions.trim()}
+  // Clean prompt content: pure instructions without artificial tags
+  const promptContent = customQuestion 
+    ? `${gem.instructions.trim()}\n\n${customQuestion.trim()}`
+    : gem.instructions.trim();
 
----
-[YÊU CẦU CỦA BẠN]: ${customQuestion}`;
-
-  DOM.inputGemChat.value = template;
+  DOM.inputGemChat.value = promptContent;
   DOM.inputGemChat.focus();
 
   // Move cursor to end
@@ -5007,7 +5006,7 @@ ${gem.instructions.trim()}
     DOM.gemStarterChips.classList.add('hidden');
   }
 
-  showToast(`Đã gọi toàn bộ chỉ dẫn của ${gem.icon} ${gem.name}`, 'info', 1800);
+  showToast(`Đã gọi chỉ dẫn ${gem.icon} ${gem.name}`, 'info', 1800);
 }
 
 // Render Gem Chat UI
@@ -5203,56 +5202,36 @@ async function startGemChatGeneration() {
     }
   }
 
-  // Parse if rawPrompt is an expanded instruction template:
-  // [CHỈ DẪN HỆ THỐNG - ...]:
-  // ...
-  // ---
-  // [YÊU CẦU CỦA BẠN]: ...
-  let systemPrompt = '';
-  let displayUserText = rawPrompt;
+  // Active Gem (if any)
+  const activeGem = state.gemState.gems.find(g => g.id === state.gemState.activeGemId);
+
+  // Pure user prompt without artificial wrappers
   let userQueryText = rawPrompt;
+  let displayUserText = rawPrompt;
 
-  const instructionMatch = rawPrompt.match(/^\[CHỈ DẪN HỆ THỐNG - ([^\]]+)\]:\s*([\s\S]*?)(?:\n\s*---\s*\n(?:\[YÊU CẦU CỦA BẠN\]:)?\s*([\s\S]*))?$/);
-  if (instructionMatch) {
-    const gemTitle = instructionMatch[1].trim();
-    const customInstructions = instructionMatch[2].trim();
-    const userQuery = (instructionMatch[3] || '').trim();
+  // Backwards compatibility: if input happens to have old [CHỈ DẪN HỆ THỐNG - ...] wrapper, extract cleanly
+  const oldInstructionMatch = rawPrompt.match(/^\[CHỈ DẪN HỆ THỐNG - ([^\]]+)\]:\s*([\s\S]*?)(?:\n\s*---\s*\n(?:\[YÊU CẦU CỦA BẠN\]:)?\s*([\s\S]*))?$/);
+  if (oldInstructionMatch) {
+    const customInstructions = oldInstructionMatch[2].trim();
+    const userQuery = (oldInstructionMatch[3] || '').trim();
+    userQueryText = customInstructions + (userQuery ? `\n\n${userQuery}` : '');
+    displayUserText = userQueryText;
+  }
 
-    if (!userQuery) {
-      showToast('Vui lòng nhập nội dung câu hỏi sau dòng [YÊU CẦU CỦA BẠN]:', 'warning', 3000);
-      if (DOM.inputGemChat) {
-        DOM.inputGemChat.focus();
-        DOM.inputGemChat.selectionStart = DOM.inputGemChat.selectionEnd = DOM.inputGemChat.value.length;
-      }
-      return;
-    }
-
-    systemPrompt = `BỘ CHỈ DẪN HỆ THỐNG CHO TRỢ LÝ (${gemTitle}):
-${customInstructions}
+  let systemPrompt = '';
+  if (activeGem) {
+    systemPrompt = `Bạn là Trợ lý AI chuyên gia thực hiện tác vụ theo kỹ năng "${activeGem.name.toUpperCase()}".
+Hãy tuân thủ triệt để tất cả các chỉ dẫn, cấu trúc, quy tắc và xử lý dữ liệu được cung cấp trong prompt của người dùng để trả về kết quả xuất sắc nhất.
 
 QUY TẮC PHẢN HỒI THỰC THI:
-- Luôn nhập vai 100% theo đúng tính cách, tôn chỉ và bộ kỹ năng chuyên sâu đã mô tả ở trên.
+- Luôn nhập vai 100% theo đúng tính cách, tôn chỉ và bộ kỹ năng chuyên sâu của Gem.
 - Sử dụng ngôn ngữ tự nhiên, mạch lạc, tôn trọng người dùng. Trình bày rõ ràng bằng Markdown (dùng tiêu đề, gạch đầu dòng, khối code khi cần).
 - Nếu người dùng yêu cầu viết kịch bản, tuân thủ tiêu chuẩn thuần lời đọc (Pure Voiceover), không chèn timeline hay visual cues giả định.`;
-
-    userQueryText = userQuery;
-    displayUserText = `**[Chỉ dẫn: ${gemTitle}]**\n\n${userQuery}`;
   } else {
-    const activeGem = state.gemState.gems.find(g => g.id === state.gemState.activeGemId) || (state.gemState.gems.length > 0 ? state.gemState.gems[0] : null);
-    if (activeGem) {
-      systemPrompt = `BỘ CHỈ DẪN HỆ THỐNG CỦA GEM "${activeGem.name.toUpperCase()}":
-${activeGem.instructions}
-
-QUY TẮC PHẢN HỒI THỰC THI:
-- Luôn nhập vai 100% theo đúng tính cách, tôn chỉ và bộ kỹ năng chuyên sâu của Gem đã mô tả ở trên.
-- Sử dụng ngôn ngữ tự nhiên, mạch lạc, tôn trọng người dùng. Trình bày rõ ràng bằng Markdown (dùng tiêu đề, gạch đầu dòng, khối code khi cần).
-- Nếu người dùng yêu cầu viết kịch bản, tuân thủ tiêu chuẩn thuần lời đọc (Pure Voiceover), không chèn timeline hay visual cues giả định.`;
-    } else {
-      systemPrompt = `Bạn là Trợ lý AI chuyên sâu về sáng tạo nội dung YouTube, kịch bản, ý tưởng và tối ưu SEO.
+    systemPrompt = `Bạn là Trợ lý AI chuyên sâu về sáng tạo nội dung YouTube, kịch bản, ý tưởng và tối ưu SEO.
 QUY TẮC PHẢN HỒI THỰC THI:
 - Phản hồi thông minh, trực diện, chuyên nghiệp. Trình bày rõ ràng bằng Markdown.
 - Nếu người dùng yêu cầu viết kịch bản, tuân thủ tiêu chuẩn thuần lời đọc (Pure Voiceover), không chèn timeline hay visual cues giả định.`;
-    }
   }
 
   // Get active provider & model
@@ -5279,8 +5258,6 @@ QUY TẮC PHẢN HỒI THỰC THI:
     showToast('Chưa chọn model AI nào trên thanh tiêu đề!', 'warning');
     return;
   }
-
-  const activeGem = state.gemState.gems.find(g => g.id === state.gemState.activeGemId) || (state.gemState.gems.length > 0 ? state.gemState.gems[0] : null);
 
   // 1. Push user message
   const userMsgId = 'msg_user_' + Date.now();
@@ -5313,6 +5290,7 @@ QUY TẮC PHẢN HỒI THỰC THI:
   if (DOM.gemStarterChips) {
     DOM.gemStarterChips.classList.remove('hidden');
   }
+  state.gemState.activeGemId = null;
 
   // Update UI state to generating
   setGemGeneratingUIState(true);
@@ -5483,10 +5461,11 @@ function setupSlashCommandAutocomplete() {
 
     const val = DOM.inputGemChat.value;
 
-    // Auto-hide context bar if user deletes or replaces the instruction template
+    // Auto-hide context bar if user clears the input box
     if (DOM.gemInputContextBar && !DOM.gemInputContextBar.classList.contains('hidden')) {
-      if (!val.includes('[CHỈ DẪN HỆ THỐNG')) {
+      if (!val.trim()) {
         DOM.gemInputContextBar.classList.add('hidden');
+        state.gemState.activeGemId = null;
         if (DOM.gemStarterChips) {
           DOM.gemStarterChips.classList.remove('hidden');
         }
@@ -5866,6 +5845,7 @@ function bindGemEvents() {
         adjustGemTextareaHeight();
         DOM.inputGemChat.focus();
       }
+      state.gemState.activeGemId = null;
       if (DOM.gemInputContextBar) {
         DOM.gemInputContextBar.classList.add('hidden');
       }
