@@ -715,10 +715,11 @@ function bindEvents() {
 
   // Module: Description & vidIQ Tags Generator Event Bindings
   if (DOM.inputDescTitle) {
-    DOM.inputDescTitle.addEventListener('input', updateDescInputCounts);
+    DOM.inputDescTitle.addEventListener('input', () => updateDescInputCounts(false));
   }
   if (DOM.inputDescContent) {
-    DOM.inputDescContent.addEventListener('input', updateDescInputCounts);
+    DOM.inputDescContent.addEventListener('input', () => updateDescInputCounts(false));
+    DOM.inputDescContent.addEventListener('paste', handleDescContentPaste);
   }
   if (DOM.btnSampleDesc) {
     DOM.btnSampleDesc.addEventListener('click', loadSampleDescription);
@@ -3870,7 +3871,25 @@ async function copyAllTitlesToClipboard() {
 // MODULE 3: YOUTUBE SEO DESCRIPTION & VIDIQ TAGS CONTROLLER
 // ===================================================================
 
-let _descCountDebounceRaf = null;
+let _descCountDebounceTimer = null;
+let _descCountIdleCallback = null;
+
+function handleDescContentPaste(e) {
+  // Bắt sự kiện dán trực tiếp (Ctrl + V hoặc chuột phải)
+  const clipboardData = e.clipboardData || window.clipboardData;
+  const pastedText = clipboardData ? clipboardData.getData('text') : '';
+  
+  if (pastedText && pastedText.length > 5000) {
+    // Đang dán kịch bản lớn (> 5.000 ký tự): Hiển thị trạng thái nhẹ ngay
+    if (DOM.descContentWordCount) {
+      DOM.descContentWordCount.textContent = '... từ';
+    }
+    // Trì hoãn phân tích nặng để trình duyệt nạp text vào DOM mượt mà
+    setTimeout(() => {
+      updateDescInputCounts(false);
+    }, 0);
+  }
+}
 
 function updateDescInputCounts(immediate = false) {
   const titleText = (DOM.inputDescTitle?.value || '').trim();
@@ -3883,6 +3902,16 @@ function updateDescInputCounts(immediate = false) {
   const contentCharCount = rawContent.length;
   if (DOM.descContentCharCount) {
     DOM.descContentCharCount.textContent = `${contentCharCount.toLocaleString('vi-VN')} ký tự`;
+  }
+
+  // Hủy các timer hoặc idle callback cũ để tránh đè luồng
+  if (_descCountDebounceTimer) {
+    clearTimeout(_descCountDebounceTimer);
+    _descCountDebounceTimer = null;
+  }
+  if (_descCountIdleCallback && window.cancelIdleCallback) {
+    window.cancelIdleCallback(_descCountIdleCallback);
+    _descCountIdleCallback = null;
   }
 
   const computeHeavyMetrics = () => {
@@ -3900,12 +3929,38 @@ function updateDescInputCounts(immediate = false) {
     checkDescReadiness();
   };
 
-  if (immediate || contentCharCount < 3000) {
-    computeHeavyMetrics();
-  } else {
-    if (_descCountDebounceRaf) cancelAnimationFrame(_descCountDebounceRaf);
-    _descCountDebounceRaf = requestAnimationFrame(computeHeavyMetrics);
+  // Nếu chuỗi rỗng thì cập nhật lập tức về 0
+  if (contentCharCount === 0) {
+    if (DOM.descContentWordCount) DOM.descContentWordCount.textContent = '0 từ';
+    autoDetectDescFormat(false);
+    autoDetectDescLanguage();
+    checkDescReadiness();
+    return;
   }
+
+  // Nếu là văn bản nhỏ (< 3000 ký tự) và có cờ immediate thật sự
+  if (immediate === true && contentCharCount < 3000) {
+    computeHeavyMetrics();
+    return;
+  }
+
+  // Nếu văn bản lớn (> 10.000 ký tự), tạm thời hiện '... từ' nếu chưa có kết quả
+  if (contentCharCount >= 10000 && !DOM.descContentWordCount?.textContent.endsWith('từ')) {
+    if (DOM.descContentWordCount) DOM.descContentWordCount.textContent = '... từ';
+  }
+
+  // Thời gian debounce tối ưu: văn bản càng lớn thì nhường frame càng lâu
+  const debounceDelay = contentCharCount > 30000 ? 180 : (contentCharCount > 5000 ? 100 : 40);
+
+  _descCountDebounceTimer = setTimeout(() => {
+    if (typeof window.requestIdleCallback === 'function') {
+      _descCountIdleCallback = window.requestIdleCallback(() => {
+        computeHeavyMetrics();
+      }, { timeout: 350 });
+    } else {
+      computeHeavyMetrics();
+    }
+  }, debounceDelay);
 }
 
 // Thuật toán nhận diện ngôn ngữ siêu nhanh và chính xác từ văn bản đầu vào (Đạt chuẩn 100% cho 8 ngôn ngữ)
@@ -3990,16 +4045,19 @@ function selectDescTargetLanguage(langKey, isAuto = false) {
 }
 
 function autoDetectDescLanguage() {
-  const titleText = (DOM.inputDescTitle?.value || '').trim();
-  const contentText = (DOM.inputDescContent?.value || '').trim();
-  const combinedText = titleText + ' ' + contentText;
+  if (state.descriptionState.isUserManualLang) return;
 
-  if (!combinedText.trim()) {
+  const titleText = (DOM.inputDescTitle?.value || '').trim();
+  // TỐI ƯU BỘ NHỚ: Chỉ lấy 1.500 ký tự đầu tiên của content để tránh tạo bản sao chuỗi 70KB rác
+  const contentSample = (DOM.inputDescContent?.value || '').slice(0, 1500).trim();
+  const sampleText = titleText ? (titleText + ' ' + contentSample).slice(0, 1500) : contentSample;
+
+  if (!sampleText) {
     state.descriptionState.isUserManualLang = false;
     return;
   }
 
-  const detected = detectLanguageFromText(combinedText);
+  const detected = detectLanguageFromText(sampleText);
   if (detected && detected !== state.descriptionState.targetLanguage) {
     selectDescTargetLanguage(detected, true);
   }
@@ -4040,11 +4098,11 @@ function detectFormatFromText(text) {
 }
 
 function autoDetectDescFormat(force = false) {
-  const contentText = (DOM.inputDescContent?.value || '').trim();
+  const rawValue = DOM.inputDescContent?.value || '';
 
-  if (!contentText) {
+  if (!rawValue) {
     state.descriptionState.isUserManualMode = false;
-    if (DOM.descFormatAutoBadge) {
+    if (DOM.descFormatAutoBadge && DOM.descFormatAutoBadge.textContent !== '⚡ Tự nhận diện') {
       DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện';
       DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
     }
@@ -4058,7 +4116,9 @@ function autoDetectDescFormat(force = false) {
     return;
   }
 
-  const detected = detectFormatFromText(contentText);
+  // TỐI ƯU HIỆU NĂNG: Chỉ lấy 3.000 ký tự đầu để nhận diện SRT timeline
+  const sample = rawValue.slice(0, 3000);
+  const detected = detectFormatFromText(sample);
   if (detected && (force || detected !== state.descriptionState.mode)) {
     setDescMode(detected, false, true);
   }
@@ -4066,23 +4126,27 @@ function autoDetectDescFormat(force = false) {
 
 function setDescMode(mode, fromUserClick = false, isAuto = false) {
   if (state.descriptionState.isGenerating) return;
+  const prevMode = state.descriptionState.mode;
   state.descriptionState.mode = mode;
 
   if (fromUserClick) {
     state.descriptionState.isUserManualMode = true;
   }
 
-  if (mode === 'plain') {
-    if (DOM.btnModePlain) DOM.btnModePlain.classList.add('active');
-    if (DOM.btnModeSrt) DOM.btnModeSrt.classList.remove('active');
-    if (DOM.inputDescContent) {
-      DOM.inputDescContent.placeholder = 'Dán toàn bộ nội dung kịch bản video hoặc bài viết tại đây để AI bóc tách giá trị, tối ưu bài Mô tả 5 tầng & Tags vidIQ...';
-    }
-  } else if (mode === 'srt') {
-    if (DOM.btnModeSrt) DOM.btnModeSrt.classList.add('active');
-    if (DOM.btnModePlain) DOM.btnModePlain.classList.remove('active');
-    if (DOM.inputDescContent) {
-      DOM.inputDescContent.placeholder = 'Dán nội dung file phụ đề SRT (chứa mốc timeline 00:00:00 --> 00:00:00) để AI tự động trích xuất các mốc thời gian Chapters thực tế...';
+  // Chỉ can thiệp DOM placeholder và active buttons khi mode thực sự thay đổi hoặc do người dùng click
+  if (prevMode !== mode || fromUserClick) {
+    if (mode === 'plain') {
+      if (DOM.btnModePlain) DOM.btnModePlain.classList.add('active');
+      if (DOM.btnModeSrt) DOM.btnModeSrt.classList.remove('active');
+      if (DOM.inputDescContent) {
+        DOM.inputDescContent.placeholder = 'Dán toàn bộ nội dung kịch bản video hoặc bài viết tại đây để AI bóc tách giá trị, tối ưu bài Mô tả 5 tầng & Tags vidIQ...';
+      }
+    } else if (mode === 'srt') {
+      if (DOM.btnModeSrt) DOM.btnModeSrt.classList.add('active');
+      if (DOM.btnModePlain) DOM.btnModePlain.classList.remove('active');
+      if (DOM.inputDescContent) {
+        DOM.inputDescContent.placeholder = 'Dán nội dung file phụ đề SRT (chứa mốc timeline 00:00:00 --> 00:00:00) để AI tự động trích xuất các mốc thời gian Chapters thực tế...';
+      }
     }
   }
 
@@ -4163,10 +4227,14 @@ async function pasteDescContent() {
   try {
     const text = await navigator.clipboard.readText();
     if (text && DOM.inputDescContent) {
-      DOM.inputDescContent.value = text;
       state.descriptionState.isUserManualMode = false;
-      updateDescInputCounts(true);
+      DOM.inputDescContent.value = text;
       showToast('Đã dán nội dung kịch bản!', 'success', 1200);
+
+      // Cập nhật ngay ký tự, hoãn đếm từ ngầm qua RAF để UI luôn mượt 60fps
+      requestAnimationFrame(() => {
+        updateDescInputCounts(text.length < 3000);
+      });
     }
   } catch (e) {
     showToast('Không thể truy cập Clipboard!', 'danger');
@@ -4175,6 +4243,14 @@ async function pasteDescContent() {
 
 function clearDescContent() {
   if (state.descriptionState.isGenerating) return;
+  if (_descCountDebounceTimer) {
+    clearTimeout(_descCountDebounceTimer);
+    _descCountDebounceTimer = null;
+  }
+  if (_descCountIdleCallback && window.cancelIdleCallback) {
+    window.cancelIdleCallback(_descCountIdleCallback);
+    _descCountIdleCallback = null;
+  }
   if (DOM.inputDescContent) {
     DOM.inputDescContent.value = '';
     state.descriptionState.isUserManualMode = false;
@@ -4183,7 +4259,7 @@ function clearDescContent() {
       DOM.descFormatAutoBadge.textContent = '⚡ Tự nhận diện';
       DOM.descFormatAutoBadge.className = 'desc-format-autodetect-badge';
     }
-    updateDescInputCounts();
+    updateDescInputCounts(true);
     DOM.inputDescContent.focus();
   }
 }
