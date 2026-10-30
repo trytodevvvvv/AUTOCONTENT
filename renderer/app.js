@@ -28,6 +28,7 @@ const state = {
   isGenerating: false,
   abortController: null,
   rawOutputScript: '',
+  scriptDetectedLang: 'vi',
   stats: {
     words: 0,
     chars: 0,
@@ -151,7 +152,8 @@ const TITLE_TARGET_LANGUAGES = {
   ko: { name: '한국어 (Tiếng Hàn)', flag: '🇰🇷', promptDesc: 'Chuẩn phong cách YouTube Hàn Quốc, giật gân, cuốn hút' },
   es: { name: 'Español (Tây Ban Nha)', flag: '🇪🇸', promptDesc: 'Español nativo, estilo viral de YouTube para España y Latinoamérica' },
   pt: { name: 'Português (Bồ Đào Nha)', flag: '🇵🇹', promptDesc: 'Português de Portugal natural, estilo envolvente para YouTube' },
-  br: { name: 'Português do Brasil', flag: '🇧🇷', promptDesc: 'Português brasileiro nativo, altamente viral e dinâmico para YouTube Brasil' }
+  br: { name: 'Português do Brasil', flag: '🇧🇷', promptDesc: 'Português brasileiro nativo, altamente viral e dinâmico para YouTube Brasil' },
+  fr: { name: 'Français (Tiếng Pháp)', flag: '🇫🇷', promptDesc: 'Français naturel et captivant pour audience YouTube' }
 };
 
 // Gemini API Constants
@@ -341,6 +343,7 @@ const DOM = {
   btnUploadFile: document.getElementById('btnUploadFile'),
   btnPasteInput: document.getElementById('btnPasteInput'),
   btnClearInput: document.getElementById('btnClearInput'),
+  scriptLangAutoBadge: document.getElementById('scriptLangAutoBadge'),
 
   // Feature Options
   optKeepOriginal: document.getElementById('optKeepOriginal'),
@@ -964,7 +967,14 @@ function bindEvents() {
     } else {
       DOM.langSelectorPanel.classList.remove('visible');
     }
+    autoDetectScriptLanguage();
   });
+
+  if (DOM.selectTargetLanguage) {
+    DOM.selectTargetLanguage.addEventListener('change', () => {
+      autoDetectScriptLanguage();
+    });
+  }
 
   if (DOM.chkAutoRotateModal) {
     DOM.chkAutoRotateModal.addEventListener('change', () => {
@@ -1233,6 +1243,36 @@ function updateInputMetrics() {
 
   DOM.inputCharCount.textContent = `${chars.toLocaleString()} ký tự`;
   DOM.inputWordCount.textContent = `${words.toLocaleString()} từ`;
+
+  autoDetectScriptLanguage();
+}
+
+function autoDetectScriptLanguage() {
+  if (!DOM.scriptLangAutoBadge) return;
+  const text = (DOM.inputOriginal?.value || '').trim();
+
+  // If user has checked "Viết lại bằng ngôn ngữ khác" (Translate mode)
+  if (DOM.optTranslate && DOM.optTranslate.checked) {
+    const targetVal = DOM.selectTargetLanguage?.value || 'English (US)';
+    const targetName = targetVal.split(' ')[0] || targetVal;
+    DOM.scriptLangAutoBadge.textContent = `🌐 Dịch sang: ${targetName}`;
+    DOM.scriptLangAutoBadge.classList.add('detected');
+    return;
+  }
+
+  if (!text) {
+    state.scriptDetectedLang = 'vi';
+    DOM.scriptLangAutoBadge.textContent = '⚡ Tự động nhận diện';
+    DOM.scriptLangAutoBadge.classList.remove('detected');
+    return;
+  }
+
+  const detected = detectLanguageFromText(text) || 'vi';
+  state.scriptDetectedLang = detected;
+  const langObj = TITLE_TARGET_LANGUAGES[detected] || TITLE_TARGET_LANGUAGES.vi;
+
+  DOM.scriptLangAutoBadge.textContent = `⚡ Nhận diện: ${langObj.name}`;
+  DOM.scriptLangAutoBadge.classList.add('detected');
 }
 
 // ===================================================================
@@ -1360,8 +1400,17 @@ async function startGeneration() {
   DOM.scriptContent.classList.remove('hidden');
   DOM.streamCursor.classList.remove('hidden');
 
-  DOM.outLangLabel.textContent = translate ? targetLanguage.split(' ')[0] : 'Gốc';
-  updateOutputStats();
+  let outputLangDisplay = 'Gốc';
+  if (translate) {
+    outputLangDisplay = targetLanguage.split(' ')[0] || targetLanguage;
+  } else {
+    const detectedKey = state.scriptDetectedLang || detectLanguageFromText(rawInput) || 'vi';
+    const langObj = TITLE_TARGET_LANGUAGES[detectedKey] || TITLE_TARGET_LANGUAGES.vi;
+    outputLangDisplay = langObj.name;
+  }
+  DOM.outLangLabel.textContent = outputLangDisplay;
+  _lastStatsUpdateTime = 0;
+  updateOutputStats(true);
 
   state.abortController = new AbortController();
 
@@ -1529,46 +1578,331 @@ async function startGeneration() {
 
 // ===================================================================
 // PURE SCRIPT PROMPT BUILDER (STRICTLY NO TIMELINE / NO VISUAL CUES)
-// EXACTLY MATCHING USER'S SCREENSHOT 4
+// 8-LANGUAGE NATIVE PROMPTING ENGINE (VI, JA, EN, KO, ZH, ES, PT, FR)
 // ===================================================================
-function buildPrompts({ originalText, keepOriginal, enhance, translate, targetLanguage, format, tone }) {
-  const toneDescriptions = {
-    lively_hook: 'Hào hứng, cuốn hút, tràn đầy năng lượng, giữ chân người nghe cao nhất.',
-    humorous: 'Hài hước, dí dỏm, châm biếm thông minh, tạo tiếng cười tự nhiên.',
-    dramatic: 'Kịch tính, hồi hộp, gay cấn như một câu chuyện điện ảnh ly kỳ.',
-    authoritative: 'Chuyên gia phân tích, điềm đạm, uy tín, giàu tính thuyết phục.',
-    inspiring: 'Truyền cảm hứng, tích cực, thắp sáng động lực mạnh mẽ.'
-  };
 
-  const formatDescriptions = {
-    youtube_standard: `CẤU TRÚC ĐỊNH DẠNG: YOUTUBE CHUẨN THUẦN LỜI BÌNH (PURE VOICEOVER - MẶC ĐỊNH):
-- Mở đầu: Hook 3-5 giây đầu cực kỳ cuốn hút, đánh trúng tâm lý tò mò.
-- Thân bài: Các đoạn văn xuôi dẫn giải mượt mà, phân tích logic, ngắt nhịp giữ chân người xem đều đặn.
-- Kết bài: Đúc kết thông điệp đắt giá, khơi gợi người xem để lại bình luận và suy ngẫm.`,
+function resolveScriptTargetLanguageKey({ translate, targetLanguage, originalText }) {
+  if (translate && targetLanguage) {
+    const tl = String(targetLanguage).toLowerCase();
+    if (tl.includes('japanese') || tl.includes('tiếng nhật') || tl.includes('日本語') || tl.includes('ja')) return 'ja';
+    if (tl.includes('english') || tl.includes('tiếng anh') || tl.includes('en')) return 'en';
+    if (tl.includes('korean') || tl.includes('tiếng hàn') || tl.includes('한국어') || tl.includes('ko')) return 'ko';
+    if (tl.includes('chinese') || tl.includes('tiếng trung') || tl.includes('中文') || tl.includes('zh')) return 'zh';
+    if (tl.includes('spanish') || tl.includes('tây ban nha') || tl.includes('español') || tl.includes('es')) return 'es';
+    if (tl.includes('portuguese') || tl.includes('bồ đào nha') || tl.includes('português') || tl.includes('pt') || tl.includes('br')) return 'pt';
+    if (tl.includes('french') || tl.includes('tiếng pháp') || tl.includes('français') || tl.includes('fr')) return 'fr';
+    if (tl.includes('tiếng việt') || tl.includes('vietnam') || tl.includes('vi')) return 'vi';
+    return 'en';
+  }
+  const detected = state.scriptDetectedLang || detectLanguageFromText(originalText) || 'vi';
+  if (detected === 'br') return 'pt';
+  return detected;
+}
 
-    geopolitics: `CẤU TRÚC ĐỊNH DẠNG: PHÂN TÍCH ĐỊA CHÍNH TRỊ / QUÂN SỰ / THỜI SỰ QUỐC TẾ (GEOPOLITICS & STRATEGY ANALYSIS):
-- Mở đầu: Khởi đầu bằng một động thái bất ngờ, một nước đi chiến lược hoặc sự kiện nóng trên bàn cờ quyền lực quốc tế.
-- Bóc tách đa chiều: Phân tích sâu sắc toan tính chiến lược, lợi ích cốt lõi của các cường quốc, đòn bẩy địa kinh tế, an ninh quốc phòng và thế cân bằng quyền lực.
-- Chiều sâu chiến lược: Sử dụng ngôn từ đanh thép, sắc bén, bản lĩnh, phân tích nguyên nhân - hậu quả có tính liên kết lịch sử.
-- Dự báo tương lai: Đưa ra nhận định sắc sảo về các kịch bản tiếp theo và tác động trực tiếp tới cục diện khu vực cũng như thế giới.`,
+const SCRIPT_PROMPT_TEMPLATES = {
+  ja: {
+    systemHeader: `あなたは世界トップクラスのYouTube専門ナレーター・放送作家・コンテンツクリエイターです。
+任務：提供された元原稿をもとに、プロのナレーターやAI音声（Text-to-Speech）がそのまま一発で収録・朗読できる「完全な純粋ナレーション原稿（Pure Voiceover Script）」を作成してください。
 
-    youtube_story: `CẤU TRÚC ĐỊNH DẠNG: KỂ CHUYỆN / PHIM / TÀI LIỆU DOCUMENTARY (STORYTELLING):
-- Dẫn dắt theo mạch tự sự điện ảnh liền mạch, tạo bối cảnh, khắc họa tâm lý nhân vật và tình huống.
-- Đẩy cao trào cảm xúc qua các bước ngoặt bất ngờ, tạo nút thắt - mở nút kịch tính, gợi hình ảnh sống động thuần túy bằng ngôn từ kể chuyện.`,
+【最重要・言語厳守命令】
+- 出力は100%日本語（Native Japanese）のみで執筆してください。
+- ベトナム語、英語、中国語など、日本語以外の言語での出力は固く禁じます。1文字たりとも他言語を混ぜないでください。
 
-    shorts_tiktok: `CẤU TRÚC ĐỊNH DẠNG: VIDEO NGẮN SHORTS / TIKTOK / REELS (DƯỚI 60 GIÂY):
-- Độ dài tối ưu: Khoảng 130 - 160 từ để đọc trọn vẹn trong vòng 60 giây.
-- Tiết tấu: Siêu nhanh, dồn dập, câu ngắn gãy gọn, giật hook cực mạnh ngay từ 1 giây đầu tiên, không dông dài mở bài, đi thẳng vào điểm mấu chốt gây sốc.`,
+【絶対禁止事項（出力に含めてはならない要素）】
+1. タイムライン・タイムコードの記載禁止（例：00:00、01:30、[0:00-0:05]など一切禁止）。
+2. 映像指示・ト書き・演出メモ・効果音の挿入禁止（例：[映像]、[シーン]、[BGM]、[効果音]、[カメラワーク]、[画像]、[テロップ]など一切禁止）。
+3. 箇条書き、見出し、アウトライン、表、構成案の挿入禁止。
+4. AIの挨拶や前置き、解説、結びの言葉の出力禁止（例：「以下は台本です」「ご参考にどうぞ」など一切不要）。
+5. 括弧[]や()による感情・動作の注記禁止。
 
-    news_explainer: `CẤU TRÚC ĐỊNH DẠNG: BẢN TIN / GIẢI MÃ KIẾN THỨC TỔNG HỢP (EXPLAINER):
-- Trình bày thông tin lớp lang rõ ràng: Hiện tượng tiêu điểm ➔ Dữ liệu thực tế ➔ Bóc tách nguyên nhân cốt lõi ➔ Đánh giá tác động ➔ Bài học đúc kết. Lối hành văn khách quan, thuyết phục.`,
+【形式およびスタイル要件】
+- 全体を滑らかで自然な散文（段落）で構成し、朗読時に引っかかりのない心地よいリズム感を持たせること。
+- 冒頭3〜5秒で視聴者の耳を釘付けにする強力なフック（導入）を配置すること。`,
+    toneLabel: '【トーン・語り口】',
+    tones: {
+      lively_hook: '活気に満ち、魅力的でエネルギーに溢れ、視聴者の維持率を最大化するトーン。',
+      humorous: 'ユーモアに富み、ウィットと知的な風刺が効いた自然な笑いを誘うトーン。',
+      dramatic: '劇的でサスペンス感に溢れ、まるで緊迫した映画のようなドラマチックなトーン。',
+      authoritative: '専門家による深い分析、落ち着きと信頼感があり、極めて説得力に富んだトーン。',
+      inspiring: 'インスピレーションを与え、前向きで強いモチベーションを呼び起こすトーン。'
+    },
+    formats: {
+      youtube_standard: `【構成形式】：YouTube標準ナレーション（フック導入 ➔ 魅力的な展開 ➔ 印象的な締めくくり）`,
+      geopolitics: `【構成形式】：地政学・軍事・国際情勢の深層分析（鋭い洞察と戦略的解説）`,
+      youtube_story: `【構成形式】：映画的ストーリーテリング・ドキュメンタリー（臨場感あるドラマチックな語り）`,
+      shorts_tiktok: `【構成形式】：60秒ショート動画（超高速テンポ、衝撃的なフック、無駄のない構成）`,
+      news_explainer: `【構成形式】：ニュース・知識解説（客観的で明快なロジック展開）`,
+      podcast_talk: `【構成形式】：ポッドキャスト・ラジオ（親しみやすく心に響く語り口調）`
+    },
+    keep: '- 事実の厳守: 元原稿の主要なメッセージ、事実関係、固有名詞、数値を正確に維持し、勝手な捏造を行わないこと。',
+    creative: '- 創造的展開: 元原稿から着想を得て、より魅力的でドラマチックな展開を加えて発展させること。',
+    enhance: '- 表現の最大化: 視聴者を最後まで惹きつけるオープンループ手法を用い、テンポ良く飽きさせない文体を徹底すること。',
+    transcreate: (target) => `- トランス・クリエーション: 元原稿の意図を汲み取り、自然で洗練された日本語ナレーションに仕上げること。`,
+    sameLang: '- 原語徹底維持: 出力は100%日本語のみ。他の言語は一切出力しないこと。',
+    systemFooter: '\n\n余計な挨拶や解説は一切省き、純粋なナレーション本文のみを出力してください。',
+    userPrompt: (text) => `以下の元原稿をもとに、上記ルールを厳守して完全な日本語ナレーション原稿（本文のみ）を作成してください：\n\n${text}`
+  },
 
-    podcast_talk: `CẤU TRÚC ĐỊNH DẠNG: PODCAST / RADIO / TALKSHOW (TÂM TÌNH):
-- Văn phong tự nhiên, ấm áp như đang trò chuyện 1-1 với người nghe trong một không gian yên tĩnh.
-- Câu từ mềm mại, có những khoảng ngắt tinh tế để người nghe thẩm thấu cảm xúc và suy tưởng.`
-  };
+  en: {
+    systemHeader: `YOU ARE A WORLD-CLASS YOUTUBE SCRIPTWRITER, BROADCASTER, AND CONTENT CREATOR.
+MISSION: Transform the provided original content into a complete, professional PURE VOICEOVER SCRIPT ready for immediate recording or Text-to-Speech synthesis.
 
-  let systemPrompt = `BẠN LÀ CHUYÊN GIA BIÊN TẬP VÀ VIẾT KỊCH BẢN THOẠI / LỜI DẪN YOUTUBE & CONTENT CREATOR HÀNG ĐẦU.
+CRITICAL LANGUAGE REQUIREMENT:
+- The entire output MUST be written 100% in natural, fluent, native ENGLISH.
+- Strictly DO NOT output in Vietnamese, Japanese, Chinese, or any other language. Zero language leakage permitted.
+
+ABSOLUTE PROHIBITIONS (NEVER INCLUDE IN THE OUTPUT):
+1. STRICTLY NO timelines or timecodes (e.g., 00:00, 01:30, [0:00 - 0:05]).
+2. STRICTLY NO visual directions, B-roll cues, sound effects, or camera notes (e.g., [Scene], [Visual], [B-Roll], [SFX], [Camera Angle]).
+3. STRICTLY NO bullet points, outlines, numbered lists, tables, or markdown headers.
+4. STRICTLY NO conversational filler, greetings, or AI commentary before or after (e.g., "Here is the script...", "Hope you like it").
+5. STRICTLY NO brackets [] or parentheses () for stage directions or emotional cues.
+
+STYLE AND FORMATTING REQUIREMENTS:
+- The entire script must be composed of smooth, engaging, natural prose paragraphs designed for effortless reading aloud.
+- The opening line must be a powerful 3-second hook that sparks instant curiosity.`,
+    toneLabel: 'Tone & Style',
+    tones: {
+      lively_hook: 'Lively, captivating, high-energy, maximizing audience retention.',
+      humorous: 'Humorous, witty, clever satire, generating natural smiles and amusement.',
+      dramatic: 'Dramatic, suspenseful, thrilling, like a cinematic blockbuster story.',
+      authoritative: 'Expert analytical, calm, authoritative, highly persuasive and credible.',
+      inspiring: 'Inspiring, uplifting, positive, igniting powerful inner motivation.'
+    },
+    formats: {
+      youtube_standard: 'FORMAT: YouTube Standard Pure Voiceover (Hook ➔ Compelling body ➔ Thought-provoking outro)',
+      geopolitics: 'FORMAT: Geopolitics & Military Strategy Analysis (Sharp, incisive, deep geopolitical insights)',
+      youtube_story: 'FORMAT: Storytelling / Cinematic Documentary (Atmospheric narrative and emotional pacing)',
+      shorts_tiktok: 'FORMAT: Shorts / TikTok under 60 seconds (Rapid pace, immediate hook, high punchiness)',
+      news_explainer: 'FORMAT: News & Deep Knowledge Explainer (Clear logic, evidence-based storytelling)',
+      podcast_talk: 'FORMAT: Podcast / Talkshow (Warm, conversational, authentic 1-on-1 dialogue)'
+    },
+    keep: '- CORE INTEGRITY: Retain all core facts, key messages, proper names, and actual data from the source without making up false facts.',
+    creative: '- CREATIVE EXPANSION: Creatively enhance and expand the narrative for maximum entertainment and engagement.',
+    enhance: '- RETENTION OPTIMIZATION: Maximize audience retention with tension-building pacing and open loops.',
+    transcreate: (target) => `- TRANSCREATION: Adapt the content into natural, idiomatic English tailored for native YouTube audiences (avoid literal translation).`,
+    sameLang: '- STRICT SAME-LANGUAGE: The script must be 100% in English. Absolutely no other language.',
+    systemFooter: '\n\nRETURN ONLY THE PURE SPOKEN VOICEOVER SCRIPT WITHOUT ANY META EXPLANATIONS OR COMMENTARY.',
+    userPrompt: (text) => `Below is the source content. Transform it into a pure voiceover script (spoken narration only) strictly adhering to all instructions above:\n\n${text}`
+  },
+
+  ko: {
+    systemHeader: `당신은 세계 최고 수준의 유튜브 전문 방송 작가이자 내레이션 디렉터입니다.
+임무: 제공된 원본 내용을 성우나 AI 보이스(TTS)가 바로 녹음할 수 있는 완벽한 "순수 오디오 내레이션 대본(Pure Voiceover Script)"으로 재구성하십시오.
+
+【최우선 언어 준수 원칙】
+- 출력은 반드시 100% 자연스럽고 몰입감 높은 한국어로만 작성해야 합니다.
+- 베트남어, 영어, 일본어 등 한국어 이외의 언어를 단 한 문장도 섞어서는 안 됩니다.
+
+【절대 금지 사항】
+1. 타임라인 / 타임코드 기재 절대 금지 (예: 00:00, [0:00-0:10] 등 금지).
+2. 화면 연출, 시각 지시문, 효과음, 카메라 앵글 기재 금지 (예: [화면], [B-Roll], [효과음], [장면] 등 금지).
+3. 개조식 글머리 기호, 개요, 표, 소제목 등 금지.
+4. AI의 인사말, 사족, 안내 문구 일체 출력 금지 (예: "대본입니다", "도움이 되길 바랍니다" 등 금지).
+5. 괄호 [], ()를 사용한 지문/행동 묘사 금지.
+
+【형식 및 스타일 요건】
+- 전체 대본은 낭독하기 편하고 리듬감이 살아있는 매끄러운 줄글 문단으로 작성하십시오.
+- 도입부는 처음 3초 만에 시청자의 귀를 사로잡는 강력한 후크(Hook)로 시작하십시오.`,
+    toneLabel: '톤 & 어조',
+    tones: {
+      lively_hook: '활기차고 몰입감 넘치며 에너지가 가득하여 시청자 유지율을 극대화하는 톤.',
+      humorous: '유머러스하고 재치 있으며 지적인 풍자가 깃든 자연스러운 웃음을 유발하는 톤.',
+      dramatic: '극적이고 긴장감 넘치며 마치 한 편의 스릴러 영화 같은 몰입감 높은 톤.',
+      authoritative: '전문가적 분석, 차분함, 신뢰성, 강력한 설득력을 갖춘 톤.',
+      inspiring: '영감을 주고 긍정적이며 강력한 동기부여를 불러일으키는 톤.'
+    },
+    formats: {
+      youtube_standard: '구성 형식: 유튜브 표준 내레이션 (도입부 후크 ➔ 흡입력 있는 본문 ➔ 여운을 남기는 마무리)',
+      geopolitics: '구성 형식: 지정학 / 군사 / 국제정세 심층 분석 (날카로운 통찰과 전략적 해설)',
+      youtube_story: '구성 형식: 영화적 스토리텔링 / 다큐멘터리 (생생한 묘사와 극적인 긴장감)',
+      shorts_tiktok: '구성 형식: 60초 숏폼 비디오 (초고속 전개, 강력한 충격 후크, 간결한 호흡)',
+      news_explainer: '구성 형식: 뉴스 & 지식 브리핑 (명쾌하고 설득력 있는 논리 전개)',
+      podcast_talk: '구성 형식: 팟캐스트 / 토크쇼 (따뜻하고 진솔한 대화형 내레이션)'
+    },
+    keep: '- 핵심 사실 유지: 원본의 주요 사실, 고유명사, 데이터를 왜곡 없이 정확하게 유지하십시오.',
+    creative: '- 창의적 확장: 원본의 영감을 바탕으로 더 풍부하고 흥미진진한 스토리로 발전시키십시오.',
+    enhance: '- 몰입도 극대화: 오픈 루프 기법과 긴장감 있는 호흡으로 끝까지 이탈 없는 문장을 완성하십시오.',
+    transcreate: (target) => `- 트랜스크리에이션: 원본의 뉘앙스를 살려 한국 유튜브 청중에 최적화된 유려한 한국어로 재창작하십시오.`,
+    sameLang: '- 100% 한국어 고수: 다른 언어는 일절 배제하고 오직 완벽한 한국어 내레이션만 출력하십시오.',
+    systemFooter: '\n\n인사말이나 부가 설명 없이 오직 순수 내레이션 대본 본문만을 출력하십시오.',
+    userPrompt: (text) => `다음 원본 내용을 바탕으로 위의 모든 지침을 엄격히 준수하여 순수 한국어 내레이션 대본 본문만을 작성하십시오:\n\n${text}`
+  },
+
+  zh: {
+    systemHeader: `你是顶级的YouTube与短视频金牌文案编剧、专业旁白导演。
+任务：将提供的原始内容改写为可直接用于配音或AI语音合成（TTS）的“纯口播旁白文案（Pure Voiceover Script）”。
+
+【最核心语言指令】
+- 输出内容必须 100% 使用地道流畅的中文（普通话口播风格）。
+- 严禁出现越南语、英语、日语等其他任何语言，严禁任何语言混杂或遗漏。
+
+【绝对禁止事项】
+1. 严禁出现任何时间轴/时间戳（如 00:00、01:30 等）。
+2. 严禁出现画面指示、分镜脚本、镜头运动、音效提示（如 [画面]、[分镜]、[背景音乐]、[音效] 等）。
+3. 严禁使用要点列表、大纲、表格或标记符号。
+4. 严禁任何AI客套话或前后缀（如“这是为您生成的文案……”等）。
+5. 严禁使用方括号 [] 或圆括号 () 标注动作神态。
+
+【文案风格与格式要求】
+- 全文采用通顺自然、富有节奏感的段落式散文呈现，口语化表达，极具听觉吸引力。
+- 开篇 3 秒必须直击痛点或悬念，形成强力钩子（Hook）。`,
+    toneLabel: '语气基调',
+    tones: {
+      lively_hook: '生动、极具感染力、充满活力、最大化观众留存率的口播语气。',
+      humorous: '幽默风趣、机智风趣、巧妙反讽，引人会心一笑。',
+      dramatic: '充满戏剧张力、悬念迭起、扣人心弦，如同电影大片般的叙事节奏。',
+      authoritative: '专家深度剖析、沉着稳重、权威可信、极具说服力。',
+      inspiring: '鼓舞人心、积极向上、激发强大内心动力的启发性口吻。'
+    },
+    formats: {
+      youtube_standard: '文案结构：YouTube标准口播（黄金前3秒黄金钩子 ➔ 环环相扣的正文 ➔ 激发共鸣的结尾）',
+      geopolitics: '文案结构：地缘政治与国际大棋局深度拆解（犀利洞察与高维战略视角）',
+      youtube_story: '文案结构：故事叙事与纪录片风格（画面感极强的电影化叙事）',
+      shorts_tiktok: '文案结构：60秒短视频（快节奏、超强悬念、高密度信息）',
+      news_explainer: '文案结构：深度科普与新闻拆解（逻辑严密、层层递进、客观有力）',
+      podcast_talk: '文案结构：播客与电台聊天（亲切真诚、娓娓道来的深层共鸣）'
+    },
+    keep: '- 坚守事实内核：严格保留核心信息、真实数据与专属名词，严禁虚构歪曲事实。',
+    creative: '- 创意延伸拓展：在尊重核心原意基础上，进行更具吸引力和戏剧张力的创意叙事。',
+    enhance: '- 极致完播率优化：运用悬念链（Open Loops）与紧凑语感，牢牢锁住听众注意力。',
+    transcreate: (target) => `- 本地化意译重塑：依据地道中文表达习惯进行润色转化，绝非生硬机翻。`,
+    sameLang: '- 纯正中文保障：输出100%为中文口播文本，绝对不夹杂任何其他语言。',
+    systemFooter: '\n\n仅输出纯正的口播文案正文，严禁附带任何寒暄或说明。',
+    userPrompt: (text) => `以下是原始内容，请严格按照上述要求，将其转化为纯口播旁白文案（仅输出正文口播内容）：\n\n${text}`
+  },
+
+  es: {
+    systemHeader: `ERES UN GUIONISTA PROFESIONAL DE YOUTUBE Y DIRECTOR DE LOCUCIÓN DE CLASE MUNDIAL.
+MISIÓN: Transformar el contenido proporcionado en un GUIÓN DE LOCUCIÓN PURA (Pure Voiceover Script) listo para ser grabado inmediatamente por un locutor o síntesis de voz (TTS).
+
+REGLA ESTRICTA DE IDIOMA:
+- La respuesta DEBE estar redactada 100% en ESPAÑOL natural, fluido y cautivador.
+- QUEDA TOTALMENTE PROHIBIDO generar contenido en vietnamita, inglés u otro idioma.
+
+PROHIBICIONES ABSOLUTAS:
+1. NUNCA incluyas marcas de tiempo o códigos de tiempo (ej.: 00:00, 01:30).
+2. NUNCA incluyas indicaciones visuales, escenas, efectos de sonido o planos (ej.: [Cámara], [Visual], [Escena], [B-Roll]).
+3. NUNCA incluyas viñetas, esquemas, tablas ni resúmenes.
+4. NUNCA incluyas saludos, preámbulos ni comentarios de la IA.
+5. NUNCA uses corchetes [] ni paréntesis () para acotaciones.
+
+FORMATO Y ESTILO:
+- Todo el guión debe estar compuesto por párrafos fluidos y naturales, diseñados para una locución impecable.
+- La primera frase debe ser un gancho (hook) potente que atrape al oyente en los primeros 3 segundos.`,
+    toneLabel: 'Tono y Estilo',
+    tones: {
+      lively_hook: 'Animado, cautivador, lleno de energía, maximizando la retención de la audiencia.',
+      humorous: 'Humorístico, ingenioso, sátira inteligente, provocando sonrisas naturales.',
+      dramatic: 'Dramático, lleno de suspense, emocionante, como una película de suspense cinematográfica.',
+      authoritative: 'Experto analítico, sereno, autoritario, altamente persuasivo y creíble.',
+      inspiring: 'Inspirador, motivador, positivo, encendiendo una poderosa motivación interior.'
+    },
+    formats: {
+      youtube_standard: 'ESTRUCTURA: Estándar de YouTube (Gancho inicial ➔ Desarrollo envolvente ➔ Conclusión reflexiva)',
+      geopolitics: 'ESTRUCTURA: Geopolítica y Estrategia Militar (Análisis profundo, incisivo y contundente)',
+      youtube_story: 'ESTRUCTURA: Narración Cinematográfica / Documental (Prosa evocadora y giros dramáticos)',
+      shorts_tiktok: 'ESTRUCTURA: Shorts / TikTok de menos de 60 segundos (Ritmo vertiginoso, gancho instantáneo)',
+      news_explainer: 'ESTRUCTURA: Noticias y Explicaciones a Fondo (Lógica clara y datos contundentes)',
+      podcast_talk: 'ESTRUCTURA: Podcast / Radio (Tono íntimo, reflexivo y conversacional)'
+    },
+    keep: '- FIDELIDAD DE DATOS: Conservar intactos los datos clave, nombres propios y hechos reales sin inventar falsedades.',
+    creative: '- EXPANSIÓN CREATIVA: Desarrollar la narrativa de manera creativa y atractiva manteniendo la esencia.',
+    enhance: '- MÁXIMA RETENCIÓN: Optimizar con ritmos tensos y bucles abiertos para atrapar al oyente hasta el final.',
+    transcreate: (target) => `- TRANSCREACIÓN: Adaptar con total naturalidad al español nativo moderno para YouTube (sin traducción literal).`,
+    sameLang: '- 100% EN ESPAÑOL: El guión debe escribirse íntegramente en español. Ningún otro idioma permitido.',
+    systemFooter: '\n\nDEVUELVE ÚNICAMENTE EL TEXTO DE LOCUCIÓN PURA SIN NINGUNA EXPLICACIÓN NI COMENTARIO ADICIONAL.',
+    userPrompt: (text) => `A continuación se presenta el contenido original. Transfórmalo en un guión de locución pura siguiendo rigurosamente las instrucciones anteriores:\n\n${text}`
+  },
+
+  pt: {
+    systemHeader: `VOCÊ É UM ROTEIRISTA PROFISSIONAL DO YOUTUBE E DIRETOR DE LOCUÇÃO DE ALTO NÍVEL.
+MISSÃO: Transformar o conteúdo fornecido em um ROTEIRO DE LOCUÇÃO PURA (Pure Voiceover Script) pronto para ser gravado imediatamente por um locutor ou voz sintetizada por IA (TTS).
+
+REGRA ESTRITA DE IDIOMA:
+- A resposta DEVE ser escrita 100% em PORTUGUÊS fluente, dinâmico e envolvente.
+- É ESTRITAMENTE PROIBIDO gerar conteúdo em vietnamita, inglês ou qualquer outro idioma.
+
+PROIBIÇÕES ABSOLUTAS:
+1. NUNCA use marcadores de tempo ou códigos de tempo (ex: 00:00, 01:30).
+2. NUNCA use instruções visuais, cenas, efeitos sonoros ou movimentos de câmera (ex: [Cena], [Visual], [Trilha sonora], [B-Roll]).
+3. NUNCA use listas com marcadores, tópicos, tabelas ou resumos.
+4. NUNCA adicione saudações ou comentários da IA.
+5. NUNCA use colchetes [] ou parênteses () para notas de encenação.
+
+FORMATO E ESTILO:
+- O roteiro deve ser composto por parágrafos fluidos, com ritmo natural para locução contínua.
+- Abertura com um gancho (hook) forte nos primeiros 3 segundos para prender a atenção do ouvinte.`,
+    toneLabel: 'Tom e Estilo',
+    tones: {
+      lively_hook: 'Animado, cativante, enérgico, maximizando a retenção do público.',
+      humorous: 'Humorístico, sagaz, sátira inteligente, gerando risos naturais.',
+      dramatic: 'Dramático, cheio de suspense, emocionante, como uma narrativa cinematográfica envolvente.',
+      authoritative: 'Especialista analítico, sereno, com autoridade, altamente persuasivo e crível.',
+      inspiring: 'Inspirador, motivador, positivo, despertando uma energia e motivação contagiantes.'
+    },
+    formats: {
+      youtube_standard: 'ESTRUTURA: YouTube Padrão (Hook magnético ➔ Desenvolvimento fluido ➔ Fechamento impactante)',
+      geopolitics: 'ESTRUTURA: Geopolítica e Estratégia Militar (Análise profunda, firme e perspicaz)',
+      youtube_story: 'ESTRUTURA: Storytelling Cinematográfico / Documentário (Ritmo narrativo imersivo)',
+      shorts_tiktok: 'ESTRUTURA: Shorts / TikTok abaixo de 60 segundos (Ritmo veloz, impacto imediato)',
+      news_explainer: 'ESTRUTURA: Notícias & Análise de Fatos (Clareza factual e lógica impecável)',
+      podcast_talk: 'ESTRUTURA: Podcast / Conversa Íntima (Tom acolhedor, reflexivo e próximo)'
+    },
+    keep: '- FIDELIDADE AOS FATOS: Manter fielmente todas as mensagens centrais, nomes próprios e fatos sem inventar.',
+    creative: '- EXPANSÃO CRIATIVA: Enriquecer a narrativa com detalhes cativantes e envolventes.',
+    enhance: '- RETENÇÃO MÁXIMA: Manter o ouvinte preso com ganchos contínuos e ritmo vibrante.',
+    transcreate: (target) => `- TRANSCREATION: Adaptar com estilo fluido ao português nativo para YouTube (sem tradução engessada).`,
+    sameLang: '- 100% EM PORTUGUÊS: Todo o roteiro deve ser gerado em português sem mistura de idiomas.',
+    systemFooter: '\n\nRETORNE APENAS O TEXTO DE LOCUÇÃO PURA, SEM COMENTÁRIOS OU METADADOS.',
+    userPrompt: (text) => `Abaixo está o conteúdo original. Transforme-o em um roteiro de locução pura (apenas o texto da narração) seguindo rigorosamente as instruções acima:\n\n${text}`
+  },
+
+  fr: {
+    systemHeader: `VOUS ÊTES UN SCÉNARISTE D'ÉLITE POUR YOUTUBE ET UN RÉALISATEUR DE VOIX OFF PROFESSIONNEL.
+MISSION: Transformer le contenu fourni en un SCRIPT DE VOIX OFF PURE (Pure Voiceover Script) prêt à être immédiatement enregistré par un comédien ou une voix IA (TTS).
+
+RÈGLE STRICTE DE LANGUE:
+- La réponse DOIT être rédigée à 100% en FRANÇAIS naturel, percutant et captivant.
+- Il est FORMELLEMENT INTERDIT d'écrire en vietnamien, en anglais ou dans toute autre langue.
+
+INTERDICTIONS ABSOLUES:
+1. AUCUN horodatage / timecode (ex. : 00:00, 01:30).
+2. AUCUNE indication visuelle, bruitage, musique ou directive de caméra (ex. : [Scène], [Plan], [B-Roll], [Bruitage], [Musique]).
+3. AUCUNE liste à puces, plan détaillé, tableau ou sommaire.
+4. AUCUNE formule de politesse, salutation ou remarque de l'IA.
+5. AUCUN crochet [] ou parenthèse () pour les notes de mise en scène.
+
+FORMAT ET STYLE:
+- Le script doit être entièrement rédigé sous forme de paragraphes continus et rythmés pour une lecture fluide à voix haute.
+- Phrase d'accroche (hook) percutante dès les 3 premières secondes.`,
+    toneLabel: 'Ton et Style',
+    tones: {
+      lively_hook: 'Vivant, captivant, plein d\'énergie, maximisant la rétention de l\'audience.',
+      humorous: 'Humoristique, spirituel, satire intelligente, provoquant le rire naturel.',
+      dramatic: 'Dramatique, plein de suspense, palpitant, digne d\'un film de cinéma captivant.',
+      authoritative: 'Expert analytique, posé, autoritaire, hautement persuasif et crédible.',
+      inspiring: 'Inspirant, motivant, positif, allumant une puissante flamme intérieure.'
+    },
+    formats: {
+      youtube_standard: 'STRUCTURE: Format YouTube Standard (Accroche percutante ➔ Corps captivant ➔ Conclusion mémorable)',
+      geopolitics: 'STRUCTURE: Géopolitique et Stratégie Militaire (Analyse profonde, rigoureuse et percutante)',
+      youtube_story: 'STRUCTURE: Storytelling Cinématographique / Documentaire (Narration immersive et intense)',
+      shorts_tiktok: 'STRUCTURE: Shorts / TikTok de moins de 60 secondes (Rythme fulgurant, accroche immédiate)',
+      news_explainer: 'STRUCTURE: Décryptage d\'Actualité et Savoirs (Raisonnement limpide et faits précis)',
+      podcast_talk: 'STRUCTURE: Podcast / Émission Audio (Chaleureux, intime et propice à la réflexion)'
+    },
+    keep: '- EXACTITUDE FACTUELLE: Préserver fidèlement tous les messages clés, faits, noms propres et chiffres sans affabulation.',
+    creative: '- DÉVELOPPEMENT CRÉATIF: Enrichir le récit de façon dynamique et captivante tout en respectant l\'essence.',
+    enhance: '- RÉTENTION MAXIMALE: Maintenir l\'attention jusqu\'au bout grâce à des relances de tension và des boucles ouvertes.',
+    transcreate: (target) => `- TRANSCREATION: Adapter en français naturel et moderne pour YouTube (éviter toute traduction littérale).`,
+    sameLang: '- 100% EN FRANÇAIS: Le script doit être rédigé exclusivement en français sans mélange linguistique.',
+    systemFooter: '\n\nRETOURNEZ UNIQUEMENT LE SCRIPT DE VOIX OFF PURE SANS AUCUN COMMENTAIRE NI SALUTATION.',
+    userPrompt: (text) => `Voici le contenu d'origine. Transformez-le en script de voix off pure en respectant rigoureusement les consignes ci-dessus :\n\n${text}`
+  },
+
+  vi: {
+    systemHeader: `BẠN LÀ CHUYÊN GIA BIÊN TẬP VÀ VIẾT KỊCH BẢN THOẠI / LỜI DẪN YOUTUBE & CONTENT CREATOR HÀNG ĐẦU.
 NHIỆM VỤ: Chuyển hóa toàn bộ nội dung gốc thành một KỊCH BẢN THUẦN LỜI ĐỌC (PURE VOICEOVER SCRIPT) HOÀN CHỈNH, CHUYÊN NGHIỆP, DÙNG ĐỂ THU ÂM HOẶC LỒNG TIẾNG ĐƯỢC NGAY LẬP TỨC.
 
 QUY TẮC CẤM TUYỆT ĐỐI (KHÔNG BAO GIỜ ĐƯỢC XUẤT HIỆN):
@@ -1581,36 +1915,75 @@ QUY TẮC CẤM TUYỆT ĐỐI (KHÔNG BAO GIỜ ĐƯỢC XUẤT HIỆN):
 YÊU CẦU ĐỊNH DẠNG VÀ PHONG CÁCH (XUẤT RA NHƯ MỘT BÀI ĐỌC THUẦN TÚY):
 - Toàn bộ kịch bản được viết thành CÁC ĐOẠN VĂN XUÔI LIỀN MẠCH, ngắt đoạn tự nhiên, giàu nhịp điệu để người đọc hoặc phần mềm đọc giọng AI (Text-to-Speech) đọc mượt mà không bị vấp.
 - Câu mở đầu phải là một HOOK CỰC KỲ CUỐN HÚT, đánh trúng tâm lý tò mò, giật mình của người nghe ngay từ 3 giây đầu tiên.
-- Nhịp văn biến hóa linh hoạt, ngôn từ giàu tính biểu cảm, tạo sự kịch tính và giữ chân người nghe từ đầu tới cuối.
-- Giọng điệu chủ đạo: ${toneDescriptions[tone] || toneDescriptions.lively_hook}
+- Nhịp văn biến hóa linh hoạt, ngôn từ giàu tính biểu cảm, tạo sự kịch tính và giữ chân người nghe từ đầu tới cuối.`,
+    toneLabel: 'Giọng điệu chủ đạo',
+    tones: {
+      lively_hook: 'Hào hứng, cuốn hút, tràn đầy năng lượng, giữ chân người nghe cao nhất.',
+      humorous: 'Hài hước, dí dỏm, châm biếm thông minh, tạo tiếng cười tự nhiên.',
+      dramatic: 'Kịch tính, hồi hộp, gay cấn như một câu chuyện điện ảnh ly kỳ.',
+      authoritative: 'Chuyên gia phân tích, điềm đạm, uy tín, giàu tính thuyết phục.',
+      inspiring: 'Truyền cảm hứng, tích cực, thắp sáng động lực mạnh mẽ.'
+    },
+    formats: {
+      youtube_standard: `CẤU TRÚC ĐỊNH DẠNG: YOUTUBE CHUẨN THUẦN LỜI BÌNH (PURE VOICEOVER - MẶC ĐỊNH):
+- Mở đầu: Hook 3-5 giây đầu cực kỳ cuốn hút, đánh trúng tâm lý tò mò.
+- Thân bài: Các đoạn văn xuôi dẫn giải mượt mà, phân tích logic, ngắt nhịp giữ chân người xem đều đặn.
+- Kết bài: Đúc kết thông điệp đắt giá, khơi gợi người xem để lại bình luận và suy ngẫm.`,
+      geopolitics: `CẤU TRÚC ĐỊNH DẠNG: PHÂN TÍCH ĐỊA CHÍNH TRỊ / QUÂN SỰ / THỜI SỰ QUỐC TẾ:
+- Mở đầu: Khởi đầu bằng một động thái bất ngờ, một nước đi chiến lược hoặc sự kiện nóng trên bàn cờ quyền lực quốc tế.
+- Bóc tách đa chiều: Phân tích sâu sắc toan tính chiến lược, lợi ích cốt lõi của các cường quốc, đòn bẩy địa kinh tế, an ninh quốc phòng và thế cân bằng quyền lực.
+- Chiều sâu chiến lược: Sử dụng ngôn từ đanh thép, sắc bén, bản lĩnh, phân tích nguyên nhân - hậu quả có tính liên kết lịch sử.
+- Dự báo tương lai: Đưa ra nhận định sắc sảo về các kịch bản tiếp theo và tác động trực tiếp tới cục diện khu vực cũng như thế giới.`,
+      youtube_story: `CẤU TRÚC ĐỊNH DẠNG: KỂ CHUYỆN / PHIM / TÀI LIỆU DOCUMENTARY (STORYTELLING):
+- Dẫn dắt theo mạch tự sự điện ảnh liền mạch, tạo bối cảnh, khắc họa tâm lý nhân vật và tình huống.
+- Đẩy cao trào cảm xúc qua các bước ngoặt bất ngờ, tạo nút thắt - mở nút kịch tính, gợi hình ảnh sống động thuần túy bằng ngôn từ kể chuyện.`,
+      shorts_tiktok: `CẤU TRÚC ĐỊNH DẠNG: VIDEO NGẮN SHORTS / TIKTOK / REELS (DƯỚI 60 GIÂY):
+- Độ dài tối ưu: Khoảng 130 - 160 từ để đọc trọn vẹn trong vòng 60 giây.
+- Tiết tấu: Siêu nhanh, dồn dập, câu ngắn gãy gọn, giật hook cực mạnh ngay từ 1 giây đầu tiên, không dông dài mở bài, đi thẳng vào điểm mấu chốt gây sốc.`,
+      news_explainer: `CẤU TRÚC ĐỊNH DẠNG: BẢN TIN / GIẢI MÃ KIẾN THỨC TỔNG HỢP (EXPLAINER):
+- Trình bày thông tin lớp lang rõ ràng: Hiện tượng tiêu điểm ➔ Dữ liệu thực tế ➔ Bóc tách nguyên nhân cốt lõi ➔ Đánh giá tác động ➔ Bài học đúc kết. Lối hành văn khách quan, thuyết phục.`,
+      podcast_talk: `CẤU TRÚC ĐỊNH DẠNG: PODCAST / RADIO / TALKSHOW (TÂM TÌNH):
+- Văn phong tự nhiên, ấm áp như đang trò chuyện 1-1 với người nghe trong một không gian yên tĩnh.
+- Câu từ mềm mại, có những khoảng ngắt tinh tế để người nghe thẩm thấu cảm xúc và suy tưởng.`
+    },
+    keep: '- BẢO TOÀN DỮ LIỆU CỐT LÕI: Phải giữ đúng mọi thông điệp chính, tên riêng, sự kiện và số liệu cốt lõi của nội dung gốc. Không tự tiện bịa đặt sai sự thật.',
+    creative: '- SÁNG TẠO MỞ RỘNG: Được phép lấy cảm hứng từ nội dung gốc để phát triển thêm các chi tiết, tình tiết hấp dẫn, kịch tính hơn.',
+    enhance: '- NÂNG CẤP VĂN PHONG ĐỈNH CAO: Tối ưu cấu trúc câu từ lôi cuốn, ngắt nhịp hồi hộp, dùng kỹ thuật gợi mở thắc mắc (Open Loops) để người nghe không thể rời tai đến câu cuối cùng.',
+    transcreate: (target) => `- CHUYỂN ĐỔI NGÔN NGỮ (TRANSCREATION): Viết lại toàn bộ kịch bản bằng ${target}. Phải dịch thoát ý, sử dụng cách hành văn tự nhiên, mượt mà chuẩn người bản xứ sáng tạo nội dung YouTube, tuyệt đối không dịch máy từng từ.`,
+    sameLang: '- NGUYÊN TẮC BẢO TOÀN NGÔN NGỮ GỐC: Xuất ra 100% bằng tiếng Việt thuần túy, không chèn tiếng nước ngoài không cần thiết.',
+    systemFooter: '\n\nCHỈ TRẢ VỀ DUY NHẤT VĂN BẢN KỊCH BẢN THUẦN LỜI ĐỌC (KHÔNG KÈM BẤT KỲ LỜI CHÚ THÍCH NÀO KHÁC).',
+    userPrompt: (text) => `Dưới đây là nội dung gốc cần chuyển hóa thành kịch bản thuần lời đọc dùng được ngay:\n\n${text}`
+  }
+};
 
-${formatDescriptions[format] || formatDescriptions.youtube_standard}`;
+function buildPrompts({ originalText, keepOriginal, enhance, translate, targetLanguage, format, tone }) {
+  const langKey = resolveScriptTargetLanguageKey({ translate, targetLanguage, originalText });
+  const tpl = SCRIPT_PROMPT_TEMPLATES[langKey] || SCRIPT_PROMPT_TEMPLATES.vi;
+
+  const toneText = tpl.tones[tone] || tpl.tones.lively_hook;
+  const formatText = tpl.formats[format] || tpl.formats.youtube_standard;
+
+  let systemPrompt = `${tpl.systemHeader}\n- ${tpl.toneLabel}: ${toneText}\n- ${formatText}`;
 
   if (keepOriginal) {
-    systemPrompt += `\n- BẢO TOÀN DỮ LIỆU CỐT LÕI: Phải giữ đúng mọi thông điệp chính, tên riêng, sự kiện và số liệu cốt lõi của nội dung gốc. Không tự tiện bịa đặt sai sự thật.`;
+    systemPrompt += `\n${tpl.keep}`;
   } else {
-    systemPrompt += `\n- SÁNG TẠO MỞ RỘNG: Được phép lấy cảm hứng từ nội dung gốc để phát triển thêm các chi tiết, tình tiết hấp dẫn, kịch tính hơn.`;
+    systemPrompt += `\n${tpl.creative}`;
   }
 
   if (enhance) {
-    systemPrompt += `\n- NÂNG CẤP VĂN PHONG ĐỈNH CAO: Tối ưu cấu trúc câu từ lôi cuốn, ngắt nhịp hồi hộp, dùng kỹ thuật gợi mở thắc mắc (Open Loops) để người nghe không thể rời tai đến câu cuối cùng.`;
+    systemPrompt += `\n${tpl.enhance}`;
   }
 
   if (translate) {
-    systemPrompt += `\n- CHUYỂN ĐỔI NGÔN NGỮ (TRANSCREATION): Viết lại toàn bộ kịch bản bằng ${targetLanguage}. Phải dịch thoát ý, sử dụng cách hành văn tự nhiên, mượt mà chuẩn người bản xứ sáng tạo nội dung YouTube, tuyệt đối không dịch máy từng từ.`;
+    systemPrompt += `\n${tpl.transcreate(targetLanguage)}`;
   } else {
-    systemPrompt += `\n- NGUYÊN TẮC BẢO TOÀN VÀ TỐI ƯU HÓA NGÔN NGỮ GỐC (STRICT SAME-LANGUAGE OUTPUT):
-+ Hãy tự động nhận diện ngôn ngữ của nội dung gốc (tiếng Hàn, tiếng Nhật, tiếng Anh, tiếng Việt, tiếng Trung, tiếng Tây Ban Nha, tiếng Pháp,...).
-+ TUYỆT ĐỐI 100% viết kịch bản bằng CHÍNH XÁC ngôn ngữ gốc của đầu vào. KHÔNG ĐƯỢC tự ý dịch sang tiếng Việt hay bất kỳ ngôn ngữ nào khác.
-+ Ví dụ: Đầu vào là tiếng Hàn ➔ Toàn bộ kịch bản xuất ra 100% bằng tiếng Hàn (한국어).
-+ Ví dụ: Đầu vào là tiếng Anh ➔ Toàn bộ kịch bản xuất ra 100% bằng tiếng Anh (English).
-+ Ví dụ: Đầu vào là tiếng Nhật ➔ Toàn bộ kịch bản xuất ra 100% bằng tiếng Nhật (日本語).
-+ Tối ưu hóa sâu sắc ngữ pháp, cách ngắt nhịp và từ vựng lôi cuốn chuyên biệt cho chính ngôn ngữ đó.`;
+    systemPrompt += `\n${tpl.sameLang}`;
   }
 
-  systemPrompt += `\n\nCHỈ TRẢ VỀ DUY NHẤT VĂN BẢN KỊCH BẢN THUẦN LỜI ĐỌC (KHÔNG KÈM BẤT KỲ LỜI CHÚ THÍCH NÀO KHÁC).`;
+  systemPrompt += tpl.systemFooter;
 
-  const userPrompt = `Dưới đây là nội dung gốc cần chuyển hóa thành kịch bản thuần lời đọc dùng được ngay:\n\n${originalText}`;
+  const userPrompt = tpl.userPrompt(originalText);
 
   return { systemPrompt, userPrompt };
 }
@@ -1620,17 +1993,64 @@ ${formatDescriptions[format] || formatDescriptions.youtube_standard}`;
 // ===================================================================
 let streamRafId = null;
 let scriptUserScrolledUp = false;
+let _lastStatsUpdateTime = 0;
+
+// High-speed incremental paragraph renderer: Updates only the active tail paragraph in O(1)
+function renderIncrementalScript() {
+  if (!DOM.scriptContent) return;
+  const raw = state.rawOutputScript;
+  if (!raw) {
+    DOM.scriptContent.innerHTML = '';
+    return;
+  }
+
+  const isTight = (state.preferences && state.preferences.lineSpacing !== 'normal');
+  const mb = isTight ? '3px' : '16px';
+  const paragraphs = raw.split(/\n\s*\n/);
+  const pCount = paragraphs.length;
+  const children = DOM.scriptContent.children;
+
+  // Defensive check: remove excess nodes if script shrank
+  while (children.length > pCount) {
+    DOM.scriptContent.removeChild(DOM.scriptContent.lastChild);
+  }
+
+  // Synchronize paragraphs incrementally
+  for (let i = 0; i < pCount; i++) {
+    const pText = paragraphs[i];
+    // Skip empty trailing paragraph at the end
+    if (!pText && i === pCount - 1 && i > 0) continue;
+
+    const formattedHtml = escapeHtml(pText.trim()).replace(/\n/g, '<br>');
+
+    if (i < children.length) {
+      // Only the active/most recent paragraph needs real-time DOM update
+      if (i >= children.length - 1) {
+        if (children[i].innerHTML !== formattedHtml) {
+          children[i].innerHTML = formattedHtml;
+        }
+      }
+    } else {
+      // New paragraph: create lightweight <p> element and append
+      const pEl = document.createElement('p');
+      pEl.style.cssText = `margin-bottom: ${mb}; font-size: 15px; line-height: 1.75; color: #1E293B; letter-spacing: -0.01em; word-break: break-word;`;
+      pEl.innerHTML = formattedHtml;
+      DOM.scriptContent.appendChild(pEl);
+    }
+  }
+
+  // Smart Auto-Scroll: Only auto-scroll down if user has NOT scrolled up to read
+  if (!scriptUserScrolledUp && DOM.outputContainer) {
+    DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
+  }
+}
 
 function scheduleStreamRender() {
   if (streamRafId) return;
   streamRafId = requestAnimationFrame(() => {
     streamRafId = null;
-    DOM.scriptContent.innerHTML = formatCleanScript(state.rawOutputScript);
-    // Smart Auto-Scroll: Only auto-scroll down if user has NOT scrolled up to read
-    if (!scriptUserScrolledUp && DOM.outputContainer) {
-      DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
-    }
-    updateOutputStats();
+    renderIncrementalScript();
+    updateOutputStats(false);
   });
 }
 
@@ -1639,11 +2059,12 @@ function flushStreamRender() {
     cancelAnimationFrame(streamRafId);
     streamRafId = null;
   }
+  // Guarantee full final layout formatting
   DOM.scriptContent.innerHTML = formatCleanScript(state.rawOutputScript);
   if (!scriptUserScrolledUp && DOM.outputContainer) {
     DOM.outputContainer.scrollTop = DOM.outputContainer.scrollHeight;
   }
-  updateOutputStats();
+  updateOutputStats(true);
 }
 
 // Append streaming text to output and schedule silky-smooth render
@@ -1652,27 +2073,72 @@ function appendOutputChunk(chunk) {
   scheduleStreamRender();
 }
 
-function updateOutputStats() {
-  const text = state.rawOutputScript || '';
-  const chars = text.length;
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-  state.stats.chars = chars;
-  state.stats.words = words;
+// Multi-language Reading Time Estimator (Western Word-based vs CJK Character-based)
+function estimateReadingTime(text) {
+  if (!text) return { totalSeconds: 0, words: 0 };
 
-  // Average reading speed: ~160 words per minute (YouTube standard voiceover)
-  const totalSeconds = Math.round((words / 160) * 60);
-  const minutes = Math.floor(totalSeconds / 60);
+  // Sample up to 1500 chars to detect CJK (Japanese / Chinese / Korean)
+  const sample = text.slice(0, 1500);
+  const isCJK = /[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF]/.test(sample);
+
+  if (isCJK) {
+    // For Japanese / Chinese: standard voiceover narration speed is ~320-350 chars/min
+    // Count non-whitespace characters for accurate Japanese/Chinese length
+    const nonSpaceChars = text.replace(/[\s\r\n\t]/g, '').length;
+    const totalSeconds = Math.round((nonSpaceChars / 330) * 60);
+    return { totalSeconds, words: nonSpaceChars };
+  } else {
+    // For Western / Vietnamese: standard voiceover speed is ~155-160 words/min
+    const words = countWordsFast(text);
+    const totalSeconds = Math.round((words / 160) * 60);
+    return { totalSeconds, words };
+  }
+}
+
+function formatEstimatedDuration(totalSeconds) {
+  if (totalSeconds < 60) {
+    return `~${Math.max(1, totalSeconds)} giây`;
+  }
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
+  if (hours > 0) {
+    return `~${hours} giờ ${minutes > 0 ? minutes + 'p' : ''}`;
+  }
+  return `~${minutes} phút ${seconds > 0 ? seconds + 's' : ''}`;
+}
+
+function updateOutputStats(force = false) {
+  const text = state.rawOutputScript || '';
+  const chars = text.length;
+  state.stats.chars = chars;
+
+  // 1. Character count is O(1) - smoothly update on every single frame at 60 FPS
   const targetCountEl = DOM.outCharCount || DOM.outWordCount;
   if (targetCountEl) {
     targetCountEl.textContent = chars.toLocaleString();
   }
 
-  if (totalSeconds < 60) {
-    DOM.outEstimatedTime.textContent = `~${totalSeconds} giây`;
-  } else {
-    DOM.outEstimatedTime.textContent = `~${minutes} phút ${seconds > 0 ? seconds + 's' : ''}`;
+  if (chars === 0) {
+    if (DOM.outEstimatedTime) DOM.outEstimatedTime.textContent = '~0 giây';
+    state.stats.words = 0;
+    return;
+  }
+
+  const now = performance.now();
+  // Throttle heavier reading time calculation to every 200ms (5 times/sec) unless force=true
+  if (!force && (now - _lastStatsUpdateTime < 200)) {
+    return;
+  }
+  _lastStatsUpdateTime = now;
+
+  // 2. Smart Duration & Word Estimation (Supports Western & CJK Japanese/Chinese)
+  const { totalSeconds, words } = estimateReadingTime(text);
+  state.stats.words = words;
+
+  if (DOM.outEstimatedTime) {
+    DOM.outEstimatedTime.textContent = formatEstimatedDuration(totalSeconds);
   }
 }
 
@@ -3999,6 +4465,11 @@ function detectLanguageFromText(text) {
 
   // 7. Tiếng Anh: Các từ khóa phổ biến trong tiêu đề / kịch bản tiếng Anh
   if (tokens.has('the') || tokens.has('and') || tokens.has('is') || tokens.has('are') || tokens.has('in') || tokens.has('on') || tokens.has('at') || tokens.has('to') || tokens.has('for') || tokens.has('with') || tokens.has('this') || tokens.has('that') || tokens.has('from') || tokens.has('how') || tokens.has('why') || tokens.has('what') || tokens.has('when') || tokens.has('where') || tokens.has('your') || tokens.has('you')) return 'en';
+
+  // 8. Tiếng Pháp
+  if (/[éèêëàâùûçîïôœæ]/i.test(sample) || tokens.has('le') || tokens.has('la') || tokens.has('les') || tokens.has('des') || tokens.has('du') || tokens.has('est') || tokens.has('pour') || tokens.has('dans') || tokens.has('avec') || tokens.has('vous') || tokens.has('nous')) {
+    if (!tokens.has('você') && !tokens.has('não') && !tokens.has('được')) return 'fr';
+  }
 
   return null;
 }

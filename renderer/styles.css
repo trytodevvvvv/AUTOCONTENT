@@ -4369,6 +4369,7 @@ input, textarea, select, button {
 
 .desc-lang-autodetect-badge,
 .title-lang-autodetect-badge,
+.script-lang-autodetect-badge,
 .desc-format-autodetect-badge {
   font-size: 10.5px;
   font-weight: 700;
@@ -4388,6 +4389,7 @@ input, textarea, select, button {
 
 .desc-lang-autodetect-badge.detected,
 .title-lang-autodetect-badge.detected,
+.script-lang-autodetect-badge.detected,
 .desc-format-autodetect-badge.detected-plain {
   background: linear-gradient(135deg, #059669 0%, #10B981 100%) !important;
   color: #FFFFFF !important;
